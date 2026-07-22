@@ -1,0 +1,126 @@
+:root {
+  --verde: #2f5d3a;
+  --verde-claro: #4a8c5f;
+  --bg: #f5f3ee;
+  --card: #ffffff;
+  --borda: #e2ddd3;
+  --texto: #2a2a24;
+  --texto-suave: #6b6b60;
+  --erro: #b23b3b;
+  --raio: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--texto);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--verde);
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 24px;
+}
+
+.btn {
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  border-radius: var(--raio);
+  padding: 10px 18px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--verde-claro);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  font-size: 15px;
+  background: #fff;
+}
+
+.campo {
+  margin-bottom: 14px;
+}
+.campo label {
+  display: block;
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+
+.tela-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.box-auth {
+  width: 100%;
+  max-width: 380px;
+}
+
+.erro {
+  color: var(--erro);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.metrica {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--verde);
+}
+.metrica-label {
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.topbar {
+  background: var(--verde);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.topbar a {
+  color: #fff;
+  margin-right: 18px;
+  text-decoration: none;
+  font-size: 15px;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "pecus",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run start:dev --workspace=apps/api",
+    "web:dev": "npm run dev --workspace=apps/web",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:studio": "npm run prisma:studio --workspace=apps/api"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.9.0"
+  }
+}

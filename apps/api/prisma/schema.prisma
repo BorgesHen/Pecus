@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PapelUsuario {
+  ADMIN
+  RESPONSAVEL
+  USUARIO
+}
+
+model Empresa {
+  id        String   @id @default(uuid())
+  nome      String
+  documento String?  // CPF ou CNPJ
+  createdAt DateTime @default(now())
+
+  usuarios      UsuarioEmpresa[]
+  lotes         Lote[]
+  gastos        Gasto[]
+  metodosManejo MetodoManejo[]
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senhaHash String
+  /// Papel global. Só ADMIN é global (suporte do sistema).
+  /// Para RESPONSAVEL/USUARIO o papel real vem de UsuarioEmpresa.
+  papelGlobal PapelUsuario @default(USUARIO)
+  createdAt DateTime @default(now())
+
+  empresas UsuarioEmpresa[]
+}
+
+/// Vínculo N:N entre usuário e empresa, guardando o papel e as permissões
+/// granulares que o RESPONSAVEL define para cada USUARIO.
+model UsuarioEmpresa {
+  id         String       @id @default(uuid())
+  usuarioId  String
+  empresaId  String
+  papel      PapelUsuario
+  /// Ex: { "lotes": "editar", "gastos": "ver", "relatorios": "nenhum" }
+  permissoes Json?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, empresaId])
+}
+
+model MetodoManejo {
+  id        String  @id @default(uuid())
+  nome      String
+  /// null = método global (seed). Preenchido = método customizado da fazenda.
+  empresaId String?
+
+  empresa Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lotes   Lote[]
+}
+
+model Lote {
+  id                String   @id @default(uuid())
+  empresaId         String
+  metodoManejoId    String?
+  identificacao     String
+  dataAquisicao     DateTime
+  quantidadeAnimais Int
+  pesoMedioEntrada  Float?   // kg
+  createdAt         DateTime @default(now())
+
+  empresa      Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  metodoManejo MetodoManejo? @relation(fields: [metodoManejoId], references: [id])
+  pesagens     Pesagem[]
+  gastos       Gasto[]
+}
+
+model Pesagem {
+  id        String   @id @default(uuid())
+  loteId    String
+  data      DateTime
+  pesoMedio Float // kg
+  createdAt DateTime @default(now())
+
+  lote Lote @relation(fields: [loteId], references: [id], onDelete: Cascade)
+}
+
+model Gasto {
+  id         String   @id @default(uuid())
+  empresaId  String
+  loteId     String?
+  categoria  String
+  descricao  String?
+  valor      Decimal  @db.Decimal(12, 2)
+  quantidade Float?   // ex: litros, sacos, kg
+  unidade    String?  // ex: "L", "kg", "saco"
+  data       DateTime
+  createdAt  DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lote    Lote?   @relation(fields: [loteId], references: [id])
+}
