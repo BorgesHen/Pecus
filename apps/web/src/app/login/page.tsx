@@ -27,41 +27,39 @@ export default function LoginPage() {
 
   return (
     <div className="tela-auth">
-      <div className="box-auth">
-        <h1 style={{ marginBottom: 4 }}>Pecus</h1>
-        <p style={{ color: 'var(--texto-suave)', marginBottom: 24 }}>
-          Entre para gerenciar sua fazenda
+      <div className="box-auth box-auth--quadrado">
+        <img src="/logo.png" alt="Pecus" className="logo-auth" />
+        <p style={{ color: 'var(--texto-suave)', marginBottom: 16, fontSize: 14, textAlign: 'center' }}>
+          Seja bem-vindo(a) ao seu portal de gerenciamento rural
         </p>
 
-        <div className="card">
-          {erro && <div className="erro">{erro}</div>}
+        {erro && <div className="erro">{erro}</div>}
 
-          <div className="campo">
-            <label>E-mail</label>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && entrar()}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Senha</label>
-            <input
-              className="input"
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && entrar()}
-            />
-          </div>
-
-          <button className="btn" style={{ width: '100%' }} onClick={entrar} disabled={carregando}>
-            {carregando ? 'Entrando...' : 'Entrar'}
-          </button>
+        <div className="campo">
+          <label>E-mail</label>
+          <input
+            className="input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar()}
+          />
         </div>
+
+        <div className="campo">
+          <label>Senha</label>
+          <input
+            className="input"
+            type="password"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar()}
+          />
+        </div>
+
+        <button className="btn" style={{ width: '100%' }} onClick={entrar} disabled={carregando}>
+          {carregando ? 'Entrando...' : 'Entrar'}
+        </button>
 
         <p style={{ marginTop: 16, fontSize: 14, textAlign: 'center' }}>
           Não tem conta? <Link href="/cadastro">Cadastre sua fazenda</Link>

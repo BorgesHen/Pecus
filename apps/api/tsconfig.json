@@ -13,9 +13,6 @@
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@pecus/shared": ["../../packages/shared/src"]
-    }
+    "resolveJsonModule": true
   }
 }

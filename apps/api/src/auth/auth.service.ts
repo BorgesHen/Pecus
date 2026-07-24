@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { PapelUsuario as PapelUsuarioPrisma } from '@prisma/client';
 import { PapelUsuario } from '@pecus/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegistrarDto } from './dto/auth.dto';
@@ -68,7 +69,7 @@ export class AuthService {
   }
 
   private gerarToken(
-    usuario: { id: string; email: string; nome: string; papelGlobal: PapelUsuario },
+    usuario: { id: string; email: string; nome: string; papelGlobal: PapelUsuarioPrisma },
     empresaAtivaId?: string,
   ) {
     const payload = {

@@ -51,3 +51,7 @@ npm run web:dev
 3. Lançamento de pesagens (ganho de peso)
 4. Lançamento de gastos por categoria
 5. Dashboard/relatórios (custo por arroba, GMD, etc.)
+
+
+
+Aplicação com foco em controle e cuidados sobre os lotes de gado, ganho de peso, gastos por período de produção, envolvendo vários processos de manejo (utilizando TIP como exemplo)

@@ -31,54 +31,53 @@ export default function CadastroPage() {
   return (
     <div className="tela-auth">
       <div className="box-auth">
-        <h1 style={{ marginBottom: 4 }}>Cadastrar fazenda</h1>
-        <p style={{ color: 'var(--texto-suave)', marginBottom: 24 }}>
+        <img src="/logo.png" alt="Pecus" className="logo-auth" />
+        <h1 style={{ marginBottom: 4, textAlign: 'center', fontSize: 20 }}>Cadastrar fazenda</h1>
+        <p style={{ color: 'var(--texto-suave)', marginBottom: 20, fontSize: 14, textAlign: 'center' }}>
           Você será o responsável e poderá convidar outros usuários depois
         </p>
 
-        <div className="card">
-          {erro && <div className="erro">{erro}</div>}
+        {erro && <div className="erro">{erro}</div>}
 
-          <div className="campo">
-            <label>Seu nome</label>
-            <input className="input" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
-          </div>
-          <div className="campo">
-            <label>Nome da fazenda / empresa</label>
-            <input
-              className="input"
-              value={form.nomeEmpresa}
-              onChange={(e) => set('nomeEmpresa', e.target.value)}
-            />
-          </div>
-          <div className="campo">
-            <label>E-mail</label>
-            <input
-              className="input"
-              type="email"
-              value={form.email}
-              onChange={(e) => set('email', e.target.value)}
-            />
-          </div>
-          <div className="campo">
-            <label>Senha (mín. 6 caracteres)</label>
-            <input
-              className="input"
-              type="password"
-              value={form.senha}
-              onChange={(e) => set('senha', e.target.value)}
-            />
-          </div>
-
-          <button
-            className="btn"
-            style={{ width: '100%' }}
-            onClick={cadastrar}
-            disabled={carregando}
-          >
-            {carregando ? 'Cadastrando...' : 'Criar conta e fazenda'}
-          </button>
+        <div className="campo">
+          <label>Seu nome</label>
+          <input className="input" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
         </div>
+        <div className="campo">
+          <label>Nome da fazenda / empresa</label>
+          <input
+            className="input"
+            value={form.nomeEmpresa}
+            onChange={(e) => set('nomeEmpresa', e.target.value)}
+          />
+        </div>
+        <div className="campo">
+          <label>E-mail</label>
+          <input
+            className="input"
+            type="email"
+            value={form.email}
+            onChange={(e) => set('email', e.target.value)}
+          />
+        </div>
+        <div className="campo">
+          <label>Senha (mín. 6 caracteres)</label>
+          <input
+            className="input"
+            type="password"
+            value={form.senha}
+            onChange={(e) => set('senha', e.target.value)}
+          />
+        </div>
+
+        <button
+          className="btn"
+          style={{ width: '100%' }}
+          onClick={cadastrar}
+          disabled={carregando}
+        >
+          {carregando ? 'Cadastrando...' : 'Criar conta e fazenda'}
+        </button>
 
         <p style={{ marginTop: 16, fontSize: 14, textAlign: 'center' }}>
           Já tem conta? <Link href="/login">Entrar</Link>

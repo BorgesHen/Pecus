@@ -37,9 +37,9 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="topbar">
-        <div>
+        <div className="topbar-brand">
           <strong>Pecus</strong>
-          <span style={{ marginLeft: 24, opacity: 0.9, fontSize: 14 }}>
+          <span className="topbar-nav">
             {/* navegação — as telas de lotes/gastos entram depois no VS Code */}
             Lotes · Pesagens · Gastos · Relatórios
           </span>
