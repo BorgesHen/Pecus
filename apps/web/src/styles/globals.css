@@ -211,6 +211,10 @@ a {
   display: flex;
   flex-direction: column;
   padding: 0 16px 24px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .shell-brand {

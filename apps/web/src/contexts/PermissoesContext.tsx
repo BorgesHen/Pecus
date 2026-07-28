@@ -11,6 +11,8 @@ interface PermissoesContextValor {
   podeAcessar: (modulo: ModuloSistema) => boolean;
   podeEditar: (modulo: ModuloSistema) => boolean;
   campoAtivo: (chave: string) => boolean;
+  /** Atualiza a configuração da empresa em todo o app (menu, forms) sem precisar recarregar a página. */
+  definirConfigEmpresa: (config: ConfiguracaoEmpresa) => void;
 }
 
 const PermissoesContext = createContext<PermissoesContextValor | null>(null);
@@ -46,6 +48,7 @@ export function PermissoesProvider({ children }: { children: React.ReactNode }) 
     podeAcessar: (modulo) => nivel(modulo) !== NivelAcesso.NENHUM,
     podeEditar: (modulo) => nivel(modulo) === NivelAcesso.EDITAR,
     campoAtivo: (chave) => campoAtivoRegistro(configEmpresa?.camposDesativados, chave),
+    definirConfigEmpresa: setConfigEmpresa,
   };
 
   return <PermissoesContext.Provider value={valor}>{children}</PermissoesContext.Provider>;

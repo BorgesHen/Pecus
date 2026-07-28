@@ -10,6 +10,7 @@ import {
   type ConfiguracaoEmpresa,
 } from '@pecus/shared';
 import { obterConfiguracaoEmpresa, atualizarConfiguracaoEmpresa } from '@/lib/empresas';
+import { usePermissoes } from '@/contexts/PermissoesContext';
 
 const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.ANIMAIS]: 'Cadastro individual de animais dentro dos lotes.',
@@ -20,6 +21,7 @@ const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
 };
 
 export default function ConfiguracoesPage() {
+  const { definirConfigEmpresa } = usePermissoes();
   const [config, setConfig] = useState<ConfiguracaoEmpresa | null>(null);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
@@ -56,6 +58,7 @@ export default function ConfiguracoesPage() {
     try {
       const atualizado = await atualizarConfiguracaoEmpresa(config);
       setConfig(atualizado);
+      definirConfigEmpresa(atualizado);
       setSucesso(true);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao salvar configurações');
