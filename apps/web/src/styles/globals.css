@@ -215,6 +215,7 @@ a {
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .shell-brand {
@@ -239,6 +240,9 @@ a {
   border-radius: var(--raio);
   font-size: 15px;
   opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .shell-nav-link:hover {
   background: rgba(255, 255, 255, 0.1);
@@ -531,9 +535,10 @@ a {
 }
 .modal {
   width: 100%;
-  max-width: 480px;
+  max-width: 640px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--card);
   border-radius: var(--raio);
   padding: 24px;
