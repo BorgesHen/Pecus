@@ -14,6 +14,7 @@ import { AnimaisModule } from './animais/animais.module';
 import { SanidadeModule } from './sanidade/sanidade.module';
 import { ReproducaoModule } from './reproducao/reproducao.module';
 import { InsumosModule } from './insumos/insumos.module';
+import { PiquetesModule } from './piquetes/piquetes.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ModuloAtivoGuard } from './common/guards/modulo-ativo.guard';
@@ -35,6 +36,7 @@ import { PermissoesGuard } from './common/guards/permissoes.guard';
     SanidadeModule,
     ReproducaoModule,
     InsumosModule,
+    PiquetesModule,
   ],
   providers: [
     // JWT protege tudo por padrão (use @Public() para abrir rotas)

@@ -29,6 +29,7 @@ const MODULOS_PERMISSAO: ModuloSistema[] = [
   ModuloSistema.PESAGENS,
   ModuloSistema.GASTOS,
   ModuloSistema.RELATORIOS,
+  ModuloSistema.PIQUETES,
 ];
 const MODULOS_EDITAVEIS: { modulo: ModuloSistema; label: string }[] = MODULOS_PERMISSAO.map(
   (modulo) => ({ modulo, label: LABEL_MODULO_SISTEMA[modulo] }),
@@ -45,6 +46,7 @@ const PERMISSOES_VAZIAS: Record<ModuloSistema, NivelAcesso> = {
   [ModuloSistema.REPRODUCAO]: NivelAcesso.NENHUM,
   [ModuloSistema.ESTOQUE]: NivelAcesso.NENHUM,
   [ModuloSistema.METODOS_MANEJO]: NivelAcesso.NENHUM,
+  [ModuloSistema.PIQUETES]: NivelAcesso.NENHUM,
 };
 
 interface FormUsuario {

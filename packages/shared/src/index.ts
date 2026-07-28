@@ -13,4 +13,5 @@ export * from './types/animal';
 export * from './types/sanidade';
 export * from './types/reproducao';
 export * from './types/estoque';
+export * from './types/piquete';
 export * from './config/campos-configuraveis';

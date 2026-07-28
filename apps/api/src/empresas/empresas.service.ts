@@ -9,8 +9,10 @@ const CAMPOS_CONFIGURACAO = {
   moduloReproducaoAtivo: true,
   moduloEstoqueAtivo: true,
   moduloMetodosManejoAtivo: true,
+  moduloPiquetesAtivo: true,
   rendimentoCarcacaPadrao: true,
   sanidadeDiasAvisoVencimento: true,
+  alturaIdealPastoPadrao: true,
   camposDesativados: true,
 } as const;
 

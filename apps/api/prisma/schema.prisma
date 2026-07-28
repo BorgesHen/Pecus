@@ -81,10 +81,13 @@ model Empresa {
   moduloReproducaoAtivo    Boolean @default(true)
   moduloEstoqueAtivo       Boolean @default(true)
   moduloMetodosManejoAtivo Boolean @default(true)
+  moduloPiquetesAtivo      Boolean @default(true)
 
   // Valores-padrão configuráveis pela fazenda.
   rendimentoCarcacaPadrao    Float @default(52)
   sanidadeDiasAvisoVencimento Int  @default(7)
+  /// Altura ideal do capim (cm) pra mover o gado pra um piquete, se ele não tiver override próprio.
+  alturaIdealPastoPadrao      Float @default(60)
 
   // Campos opcionais desativados por tela (painel de configuração), formato
   // "tela.campo" (ex: "lotes.rendimentoCarcaca"). Ver packages/shared
@@ -165,6 +168,43 @@ model Lote {
   gastos          Gasto[]
   metodoHistorico LoteMetodoHistorico[]
   animais         Animal[]
+  piquetes        Piquete[]
+}
+
+/// Subdivisão da área de pasto do lote (pastejo rotacionado).
+model Piquete {
+  id            String   @id @default(uuid())
+  loteId        String
+  nome          String
+  areaHectares  Float?
+  /// Override por piquete; se nulo, usa Empresa.alturaIdealPastoPadrao.
+  alturaIdealCm Float?
+  createdAt     DateTime @default(now())
+
+  lote            Lote                  @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  registrosAltura RegistroAlturaPasto[]
+  ocupacoes       OcupacaoPiquete[]
+}
+
+/// Medição da altura do capim num piquete ("controle do pasto").
+model RegistroAlturaPasto {
+  id        String   @id @default(uuid())
+  piqueteId String
+  data      DateTime
+  alturaCm  Float
+  createdAt DateTime @default(now())
+
+  piquete Piquete @relation(fields: [piqueteId], references: [id], onDelete: Cascade)
+}
+
+/// Fase em que o piquete concentrou o gado do lote. dataFim nula = ocupado agora.
+model OcupacaoPiquete {
+  id         String    @id @default(uuid())
+  piqueteId  String
+  dataInicio DateTime
+  dataFim    DateTime?
+
+  piquete Piquete @relation(fields: [piqueteId], references: [id], onDelete: Cascade)
 }
 
 /// Cadastro individual do animal — complementar ao Lote (que continua sendo a

@@ -18,6 +18,7 @@ const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.REPRODUCAO]: 'Estação de monta, diagnóstico de gestação, partos.',
   [ModuloSistema.ESTOQUE]: 'Controle de saldo de insumos (ração, suplemento etc.).',
   [ModuloSistema.METODOS_MANEJO]: 'Tela de gestão de métodos de manejo customizados.',
+  [ModuloSistema.PIQUETES]: 'Subdivisão da área de pasto em piquetes, com controle de altura e rotação do gado.',
 };
 
 export default function ConfiguracoesPage() {
@@ -184,6 +185,21 @@ export default function ConfiguracoesPage() {
               <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginTop: 6 }}>
                 Com quantos dias de antecedência a tela de Sanidade avisa de uma aplicação
                 próxima do vencimento.
+              </p>
+            </div>
+            <div className="campo">
+              <label>Altura ideal do capim (cm)</label>
+              <input
+                className="input"
+                type="number"
+                value={config.alturaIdealPastoPadrao}
+                onChange={(e) =>
+                  setConfig({ ...config, alturaIdealPastoPadrao: Number(e.target.value) })
+                }
+              />
+              <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginTop: 6 }}>
+                Altura em que um piquete fica pronto pra receber o gado, se ele não tiver uma
+                altura ideal própria definida.
               </p>
             </div>
           </div>

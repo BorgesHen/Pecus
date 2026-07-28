@@ -42,6 +42,10 @@ export class AtualizarConfiguracaoEmpresaDto {
   moduloMetodosManejoAtivo?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  moduloPiquetesAtivo?: boolean;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
@@ -51,6 +55,11 @@ export class AtualizarConfiguracaoEmpresaDto {
   @IsInt()
   @Min(0)
   sanidadeDiasAvisoVencimento?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  alturaIdealPastoPadrao?: number;
 
   @IsOptional()
   @IsArray()
