@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsDateString, IsNumber, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsDateString, IsNumber, Min, Max } from 'class-validator';
 
 export class CriarLoteDto {
   @IsString()
@@ -18,6 +18,22 @@ export class CriarLoteDto {
   @IsOptional()
   @IsString()
   metodoManejoId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  rendimentoCarcaca?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  areaHectares?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  gmdEsperado?: number;
 }
 
 export class AtualizarLoteDto {
@@ -39,6 +55,27 @@ export class AtualizarLoteDto {
   pesoMedioEntrada?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  rendimentoCarcaca?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  areaHectares?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  gmdEsperado?: number;
+}
+
+/** Troca o método de manejo do lote, fechando a fase atual no histórico e abrindo uma nova. */
+export class TrocarMetodoLoteDto {
   @IsString()
-  metodoManejoId?: string;
+  metodoManejoId: string;
+
+  @IsDateString()
+  dataTroca: string;
 }

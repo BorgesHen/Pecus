@@ -2,6 +2,7 @@ export interface Gasto {
   id: string;
   empresaId: string;
   loteId?: string | null; // null = gasto geral da fazenda, não atribuído a um lote
+  insumoId?: string | null; // se informado, dá entrada automática no estoque desse insumo
   categoria: string;
   descricao?: string | null;
   valor: number;

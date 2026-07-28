@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CriarEmpresaDto {
   @IsString()
@@ -17,4 +17,43 @@ export class AtualizarEmpresaDto {
   @IsOptional()
   @IsString()
   documento?: string;
+}
+
+/** Painel de Configurações: módulos ativos + valores-padrão da fazenda. */
+export class AtualizarConfiguracaoEmpresaDto {
+  @IsOptional()
+  @IsBoolean()
+  moduloAnimaisAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  moduloSanidadeAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  moduloReproducaoAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  moduloEstoqueAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  moduloMetodosManejoAtivo?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  rendimentoCarcacaPadrao?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  sanidadeDiasAvisoVencimento?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  camposDesativados?: string[];
 }

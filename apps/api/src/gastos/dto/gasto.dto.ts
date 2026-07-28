@@ -17,6 +17,10 @@ export class CriarGastoDto {
 
   @IsOptional()
   @IsString()
+  insumoId?: string;
+
+  @IsOptional()
+  @IsString()
   descricao?: string;
 
   @IsOptional()

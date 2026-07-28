@@ -1,7 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { PapelUsuario, UsuarioAutenticado } from '@pecus/shared';
 import { EmpresasService } from './empresas.service';
-import { CriarEmpresaDto, AtualizarEmpresaDto } from './dto/empresa.dto';
+import {
+  CriarEmpresaDto,
+  AtualizarEmpresaDto,
+  AtualizarConfiguracaoEmpresaDto,
+} from './dto/empresa.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 
@@ -12,6 +16,22 @@ export class EmpresasController {
   @Get()
   listar(@CurrentUser() user: UsuarioAutenticado) {
     return this.empresasService.listar(user.id, user.papelGlobal);
+  }
+
+  // Precisam vir ANTES de @Get(':id')/@Patch(':id') — senão ':id' captura
+  // "configuracao" como se fosse um id de empresa.
+  @Get('configuracao')
+  obterConfiguracao(@CurrentUser() user: UsuarioAutenticado) {
+    return this.empresasService.obterConfiguracao(user.empresaAtivaId!);
+  }
+
+  @Roles(PapelUsuario.RESPONSAVEL)
+  @Patch('configuracao')
+  atualizarConfiguracao(
+    @CurrentUser() user: UsuarioAutenticado,
+    @Body() dto: AtualizarConfiguracaoEmpresaDto,
+  ) {
+    return this.empresasService.atualizarConfiguracao(user.empresaAtivaId!, dto);
   }
 
   @Get(':id')

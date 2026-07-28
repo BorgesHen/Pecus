@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RegistrarDto } from './dto/auth.dto';
+import { LoginDto, RegistrarDto, TrocarEmpresaDto } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsuarioAutenticado } from '@pecus/shared';
@@ -25,5 +25,11 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: UsuarioAutenticado) {
     return user;
+  }
+
+  /** Reemite o token com outra empresa ativa — usado pelo seletor de empresa (multi-fazenda/consultor). */
+  @Post('trocar-empresa')
+  trocarEmpresa(@CurrentUser() user: UsuarioAutenticado, @Body() dto: TrocarEmpresaDto) {
+    return this.authService.trocarEmpresa(user.id, dto.empresaId);
   }
 }

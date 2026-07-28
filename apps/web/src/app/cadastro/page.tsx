@@ -4,11 +4,15 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { registrar } from '@/lib/auth';
+import { ApiError } from '@/lib/api';
+import { PopupErro } from '@/components/PopupErro';
+import { CampoSenha } from '@/components/CampoSenha';
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', nomeEmpresa: '' });
+  const [form, setForm] = useState({ nome: '', usuario: '', email: '', senha: '', nomeEmpresa: '' });
   const [erro, setErro] = useState('');
+  const [erroDuplicidade, setErroDuplicidade] = useState('');
   const [carregando, setCarregando] = useState(false);
 
   function set(campo: keyof typeof form, valor: string) {
@@ -22,7 +26,11 @@ export default function CadastroPage() {
       await registrar(form);
       router.push('/dashboard');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao cadastrar');
+      if (e instanceof ApiError && e.status === 409) {
+        setErroDuplicidade(e.message);
+      } else {
+        setErro(e instanceof Error ? e.message : 'Falha ao cadastrar');
+      }
     } finally {
       setCarregando(false);
     }
@@ -44,6 +52,14 @@ export default function CadastroPage() {
           <input className="input" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
         </div>
         <div className="campo">
+          <label>Usuário (para fazer login)</label>
+          <input
+            className="input"
+            value={form.usuario}
+            onChange={(e) => set('usuario', e.target.value)}
+          />
+        </div>
+        <div className="campo">
           <label>Nome da fazenda / empresa</label>
           <input
             className="input"
@@ -60,15 +76,7 @@ export default function CadastroPage() {
             onChange={(e) => set('email', e.target.value)}
           />
         </div>
-        <div className="campo">
-          <label>Senha (mín. 6 caracteres)</label>
-          <input
-            className="input"
-            type="password"
-            value={form.senha}
-            onChange={(e) => set('senha', e.target.value)}
-          />
-        </div>
+        <CampoSenha label="Senha (mín. 6 caracteres)" value={form.senha} onChange={(v) => set('senha', v)} />
 
         <button
           className="btn"
@@ -83,6 +91,10 @@ export default function CadastroPage() {
           Já tem conta? <Link href="/login">Entrar</Link>
         </p>
       </div>
+
+      {erroDuplicidade && (
+        <PopupErro mensagem={erroDuplicidade} onFechar={() => setErroDuplicidade('')} />
+      )}
     </div>
   );
 }

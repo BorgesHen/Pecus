@@ -21,7 +21,17 @@ interface ApiOptions {
   auth?: boolean; // envia o token (padrão true)
 }
 
-/** Wrapper único de fetch para a API. Lança Error com a mensagem do backend. */
+/** Erro de API que preserva o status HTTP, para o front distinguir o tipo de falha (ex: 409 = duplicidade). */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/** Wrapper único de fetch para a API. Lança ApiError com a mensagem e o status do backend. */
 export async function api<T = unknown>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options;
 
@@ -41,11 +51,11 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
     let mensagem = `Erro ${res.status}`;
     try {
       const erro = await res.json();
-      mensagem = Array.isArray(erro.message) ? erro.message.join(', ') : erro.message ?? mensagem;
+      mensagem = Array.isArray(erro.message) ? erro.message.join('\n') : erro.message ?? mensagem;
     } catch {
       // resposta sem JSON
     }
-    throw new Error(mensagem);
+    throw new ApiError(mensagem, res.status);
   }
 
   if (res.status === 204) return undefined as T;

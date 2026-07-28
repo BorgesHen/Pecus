@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsObject, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import { NivelAcesso, PapelUsuario, PermissoesGranulares } from '@pecus/shared';
 
 /**
@@ -8,6 +8,13 @@ import { NivelAcesso, PapelUsuario, PermissoesGranulares } from '@pecus/shared';
 export class CriarUsuarioDto {
   @IsString()
   nome: string;
+
+  @IsString()
+  @MinLength(3)
+  @Matches(/^[a-zA-Z0-9._-]+$/, {
+    message: 'Usuário deve conter apenas letras, números, ponto, hífen ou underscore.',
+  })
+  usuario: string;
 
   @IsEmail()
   email: string;
@@ -28,4 +35,23 @@ export class CriarUsuarioDto {
 export class AtualizarPermissoesDto {
   @IsObject()
   permissoes: Record<string, NivelAcesso>;
+}
+
+/** Edição de nome, usuário (login) e e-mail de um usuário já vinculado. */
+export class AtualizarUsuarioDto {
+  @IsOptional()
+  @IsString()
+  nome?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @Matches(/^[a-zA-Z0-9._-]+$/, {
+    message: 'Usuário deve conter apenas letras, números, ponto, hífen ou underscore.',
+  })
+  usuario?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 }

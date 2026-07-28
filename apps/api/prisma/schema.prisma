@@ -13,22 +13,101 @@ enum PapelUsuario {
   USUARIO
 }
 
+/// Define qual bloco de fórmulas (relatorios.service.ts) se aplica ao método,
+/// tanto para os métodos globais do seed quanto para os customizados por empresa.
+enum TipoMetodoManejo {
+  EXTENSIVO
+  SEMICONFINAMENTO
+  TIP
+  CONFINAMENTO
+  RECRIA
+  NAO_DEFINIDO
+}
+
+enum SexoAnimal {
+  MACHO
+  FEMEA
+}
+
+enum CategoriaAnimal {
+  BEZERRO
+  NOVILHA
+  NOVILHO
+  VACA
+  MATRIZ
+  TOURO
+  BOI
+  OUTRO
+}
+
+enum StatusAnimal {
+  ATIVO
+  VENDIDO
+  MORTO
+  TRANSFERIDO
+}
+
+enum TipoEventoSanitario {
+  VACINA
+  MEDICAMENTO
+  EXAME
+  OUTRO
+}
+
+enum TipoEventoReprodutivo {
+  ESTACAO_MONTA
+  INSEMINACAO
+  DIAGNOSTICO_GESTACAO
+  PARTO
+  DESMAME
+  DESCARTE
+}
+
+enum TipoMovimentoInsumo {
+  ENTRADA
+  SAIDA
+}
+
 model Empresa {
   id        String   @id @default(uuid())
   nome      String
   documento String?  // CPF ou CNPJ
   createdAt DateTime @default(now())
 
+  // Módulos ativos/inativos pra esta fazenda (painel de configuração).
+  // Lotes/Gastos/Relatórios/Usuários/Pesagens são o núcleo e não têm toggle.
+  moduloAnimaisAtivo       Boolean @default(true)
+  moduloSanidadeAtivo      Boolean @default(true)
+  moduloReproducaoAtivo    Boolean @default(true)
+  moduloEstoqueAtivo       Boolean @default(true)
+  moduloMetodosManejoAtivo Boolean @default(true)
+
+  // Valores-padrão configuráveis pela fazenda.
+  rendimentoCarcacaPadrao    Float @default(52)
+  sanidadeDiasAvisoVencimento Int  @default(7)
+
+  // Campos opcionais desativados por tela (painel de configuração), formato
+  // "tela.campo" (ex: "lotes.rendimentoCarcaca"). Ver packages/shared
+  // TELAS_CAMPOS_CONFIGURAVEIS pra lista de chaves válidas.
+  camposDesativados Json @default("[]")
+
   usuarios      UsuarioEmpresa[]
   lotes         Lote[]
   gastos        Gasto[]
   metodosManejo MetodoManejo[]
+  animais       Animal[]
+  eventosSanitarios EventoSanitario[]
+  eventosReprodutivos EventoReprodutivo[]
+  insumos Insumo[]
+  movimentosInsumo MovimentoInsumo[]
 }
 
 model Usuario {
   id        String   @id @default(uuid())
   nome      String
   email     String   @unique
+  /// Usado para login (em vez do e-mail). Ex: "joao.silva"
+  usuario   String   @unique
   senhaHash String
   /// Papel global. Só ADMIN é global (suporte do sistema).
   /// Para RESPONSAVEL/USUARIO o papel real vem de UsuarioEmpresa.
@@ -55,13 +134,15 @@ model UsuarioEmpresa {
 }
 
 model MetodoManejo {
-  id        String  @id @default(uuid())
+  id        String           @id @default(uuid())
   nome      String
   /// null = método global (seed). Preenchido = método customizado da fazenda.
   empresaId String?
+  tipo      TipoMetodoManejo @default(NAO_DEFINIDO)
 
-  empresa Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lotes   Lote[]
+  empresa    Empresa?               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lotes      Lote[]
+  historicos LoteMetodoHistorico[]
 }
 
 model Lote {
@@ -72,12 +153,93 @@ model Lote {
   dataAquisicao     DateTime
   quantidadeAnimais Int
   pesoMedioEntrada  Float?   // kg
+  /// % que vira carcaça (ex: 52). Se nulo, relatorios.service.ts usa 52 como padrão.
+  rendimentoCarcaca Float?
+  areaHectares      Float?   // ha — usado por métodos a pasto (lotação, ganho/ha)
+  gmdEsperado       Float?   // kg/dia — meta de referência p/ comparar com o GMD real
   createdAt         DateTime @default(now())
 
-  empresa      Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  metodoManejo MetodoManejo? @relation(fields: [metodoManejoId], references: [id])
-  pesagens     Pesagem[]
-  gastos       Gasto[]
+  empresa         Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  metodoManejo    MetodoManejo?          @relation(fields: [metodoManejoId], references: [id])
+  pesagens        Pesagem[]
+  gastos          Gasto[]
+  metodoHistorico LoteMetodoHistorico[]
+  animais         Animal[]
+}
+
+/// Cadastro individual do animal — complementar ao Lote (que continua sendo a
+/// unidade de custo/produtividade). Serve de ancoragem para Sanidade e
+/// Reprodução; não substitui Lote.quantidadeAnimais nem Pesagem/Gasto do lote.
+model Animal {
+  id             String          @id @default(uuid())
+  empresaId      String
+  loteId         String?
+  /// Brinco/identificador — único dentro da empresa.
+  identificador  String
+  sexo           SexoAnimal
+  categoria      CategoriaAnimal
+  dataNascimento DateTime?
+  dataEntrada    DateTime
+  pesoEntrada    Float?
+  status         StatusAnimal    @default(ATIVO)
+  dataSaida      DateTime?
+  motivoSaida    String?
+  observacao     String?
+  createdAt      DateTime        @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lote    Lote?   @relation(fields: [loteId], references: [id])
+  eventosSanitarios EventoSanitario[]
+  eventosReprodutivos EventoReprodutivo[] @relation("EventoReprodutivoAnimal")
+  nascimentosComoCria EventoReprodutivo[] @relation("EventoReprodutivoCria")
+
+  @@unique([empresaId, identificador])
+}
+
+model EventoSanitario {
+  id               String              @id @default(uuid())
+  empresaId        String
+  animalId         String
+  tipo             TipoEventoSanitario
+  nome             String
+  data             DateTime
+  proximaAplicacao DateTime?
+  observacao       String?
+  createdAt        DateTime            @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  animal  Animal  @relation(fields: [animalId], references: [id], onDelete: Cascade)
+}
+
+/// Evento reprodutivo ligado à matriz/touro (animalId). Quando tipo = PARTO e a
+/// cria já foi cadastrada como Animal, criaId aponta pra ela.
+model EventoReprodutivo {
+  id         String                @id @default(uuid())
+  empresaId  String
+  animalId   String
+  tipo       TipoEventoReprodutivo
+  data       DateTime
+  resultado  String?
+  criaId     String?
+  observacao String?
+  createdAt  DateTime              @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  animal  Animal  @relation("EventoReprodutivoAnimal", fields: [animalId], references: [id], onDelete: Cascade)
+  cria    Animal? @relation("EventoReprodutivoCria", fields: [criaId], references: [id])
+}
+
+/// Uma linha por período em que o lote esteve num método de manejo.
+/// dataFim = null → fase atual (em andamento).
+model LoteMetodoHistorico {
+  id             String    @id @default(uuid())
+  loteId         String
+  metodoManejoId String
+  dataInicio     DateTime
+  dataFim        DateTime?
+
+  lote         Lote         @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  metodoManejo MetodoManejo @relation(fields: [metodoManejoId], references: [id])
 }
 
 model Pesagem {
@@ -94,6 +256,7 @@ model Gasto {
   id         String   @id @default(uuid())
   empresaId  String
   loteId     String?
+  insumoId   String?  // se informado, o valor lançado dá entrada no estoque desse insumo
   categoria  String
   descricao  String?
   valor      Decimal  @db.Decimal(12, 2)
@@ -104,4 +267,37 @@ model Gasto {
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   lote    Lote?   @relation(fields: [loteId], references: [id])
+  insumo  Insumo? @relation(fields: [insumoId], references: [id])
+  movimentosInsumo MovimentoInsumo[]
+}
+
+model Insumo {
+  id            String   @id @default(uuid())
+  empresaId     String
+  nome          String
+  unidade       String
+  estoqueMinimo Float?
+  createdAt     DateTime @default(now())
+
+  empresa    Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimentos MovimentoInsumo[]
+  gastos     Gasto[]
+
+  @@unique([empresaId, nome])
+}
+
+model MovimentoInsumo {
+  id         String              @id @default(uuid())
+  empresaId  String
+  insumoId   String
+  tipo       TipoMovimentoInsumo
+  quantidade Float
+  data       DateTime
+  gastoId    String?
+  observacao String?
+  createdAt  DateTime            @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  insumo  Insumo  @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  gasto   Gasto?  @relation(fields: [gastoId], references: [id])
 }

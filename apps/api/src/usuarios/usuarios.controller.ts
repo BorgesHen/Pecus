@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { PapelUsuario, UsuarioAutenticado } from '@pecus/shared';
 import { UsuariosService } from './usuarios.service';
-import { CriarUsuarioDto, AtualizarPermissoesDto } from './dto/usuario.dto';
+import { CriarUsuarioDto, AtualizarPermissoesDto, AtualizarUsuarioDto } from './dto/usuario.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 
@@ -16,9 +16,33 @@ export class UsuariosController {
     return this.usuariosService.listarDaEmpresa(user.empresaAtivaId!);
   }
 
+  /**
+   * Papel + permissões do usuário logado, para o frontend ajustar navegação
+   * e ações. @Roles() vazio libera a rota para qualquer papel autenticado,
+   * sobrepondo o @Roles(RESPONSAVEL) do controller.
+   */
+  @Roles()
+  @Get('me/permissoes')
+  minhasPermissoes(@CurrentUser() user: UsuarioAutenticado) {
+    return this.usuariosService.obterMinhasPermissoes(
+      user.empresaAtivaId!,
+      user.id,
+      user.papelGlobal,
+    );
+  }
+
   @Post()
   criar(@CurrentUser() user: UsuarioAutenticado, @Body() dto: CriarUsuarioDto) {
     return this.usuariosService.criarNaEmpresa(user.empresaAtivaId!, dto);
+  }
+
+  @Patch(':usuarioId')
+  atualizarInfo(
+    @CurrentUser() user: UsuarioAutenticado,
+    @Param('usuarioId') usuarioId: string,
+    @Body() dto: AtualizarUsuarioDto,
+  ) {
+    return this.usuariosService.atualizarInfo(user.empresaAtivaId!, usuarioId, dto);
   }
 
   @Patch(':usuarioId/permissoes')

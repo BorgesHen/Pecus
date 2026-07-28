@@ -1,24 +1,28 @@
-import { PrismaClient, PapelUsuario } from '@prisma/client';
+import { PrismaClient, PapelUsuario, TipoMetodoManejo } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-const METODOS_PADRAO = [
-  'TIP - Terminação Intensiva a Pasto',
-  'Confinamento',
-  'Semiconfinamento',
-  'Extensivo (pasto)',
-  'Recria',
+const METODOS_PADRAO: { nome: string; tipo: TipoMetodoManejo }[] = [
+  { nome: 'TIP - Terminação Intensiva a Pasto', tipo: TipoMetodoManejo.TIP },
+  { nome: 'Confinamento', tipo: TipoMetodoManejo.CONFINAMENTO },
+  { nome: 'Semiconfinamento', tipo: TipoMetodoManejo.SEMICONFINAMENTO },
+  { nome: 'Extensivo (pasto)', tipo: TipoMetodoManejo.EXTENSIVO },
+  { nome: 'Recria', tipo: TipoMetodoManejo.RECRIA },
 ];
 
 async function main() {
   // Métodos de manejo globais (empresaId = null)
-  for (const nome of METODOS_PADRAO) {
+  for (const { nome, tipo } of METODOS_PADRAO) {
     const existe = await prisma.metodoManejo.findFirst({
       where: { nome, empresaId: null },
     });
-    if (!existe) {
-      await prisma.metodoManejo.create({ data: { nome, empresaId: null } });
+    if (existe) {
+      if (existe.tipo !== tipo) {
+        await prisma.metodoManejo.update({ where: { id: existe.id }, data: { tipo } });
+      }
+    } else {
+      await prisma.metodoManejo.create({ data: { nome, empresaId: null, tipo } });
     }
   }
 
@@ -30,6 +34,7 @@ async function main() {
       data: {
         nome: 'Administrador',
         email: adminEmail,
+        usuario: 'admin',
         senhaHash: await bcrypt.hash('admin123', 10),
         papelGlobal: PapelUsuario.ADMIN,
       },

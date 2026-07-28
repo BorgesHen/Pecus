@@ -1,10 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { PapelUsuario, UsuarioAutenticado } from '@pecus/shared';
+import { ModuloSistema, PapelUsuario, UsuarioAutenticado } from '@pecus/shared';
 import { MetodosManejoService } from './metodos-manejo.service';
 import { CriarMetodoManejoDto } from './dto/metodo-manejo.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { ModuloAtivo } from '../common/decorators/modulo-ativo.decorator';
 
+@ModuloAtivo(ModuloSistema.METODOS_MANEJO)
 @Controller('metodos-manejo')
 export class MetodosManejoController {
   constructor(private service: MetodosManejoService) {}

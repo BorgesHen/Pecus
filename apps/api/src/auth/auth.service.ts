@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PapelUsuario as PapelUsuarioPrisma } from '@prisma/client';
@@ -18,9 +24,27 @@ export class AuthService {
    * vinculando os dois. É assim que uma nova fazenda entra no sistema.
    */
   async registrar(dto: RegistrarDto) {
-    const existe = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
-    if (existe) {
-      throw new ConflictException('E-mail já cadastrado.');
+    const [usuariosConflitantes, empresaConflitante] = await Promise.all([
+      this.prisma.usuario.findMany({
+        where: { OR: [{ email: dto.email }, { usuario: dto.usuario }] },
+      }),
+      this.prisma.empresa.findFirst({
+        where: { nome: { equals: dto.nomeEmpresa, mode: 'insensitive' } },
+      }),
+    ]);
+
+    const conflitos: string[] = [];
+    if (usuariosConflitantes.some((u) => u.email === dto.email)) {
+      conflitos.push('E-mail já cadastrado. Use outro e-mail para continuar.');
+    }
+    if (usuariosConflitantes.some((u) => u.usuario === dto.usuario)) {
+      conflitos.push('Usuário já em uso. Escolha outro nome de usuário.');
+    }
+    if (empresaConflitante) {
+      conflitos.push('Nome da fazenda já cadastrado. Escolha um nome diferente.');
+    }
+    if (conflitos.length > 0) {
+      throw new ConflictException(conflitos);
     }
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
@@ -30,6 +54,7 @@ export class AuthService {
         data: {
           nome: dto.nome,
           email: dto.email,
+          usuario: dto.usuario,
           senhaHash,
           papelGlobal: PapelUsuario.RESPONSAVEL,
         },
@@ -55,7 +80,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const usuario = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
+      where: { usuario: dto.usuario },
       include: { empresas: true },
     });
 
@@ -66,6 +91,24 @@ export class AuthService {
     // Seleciona a primeira empresa como ativa (o front pode trocar depois)
     const empresaAtivaId = usuario.empresas[0]?.empresaId;
     return this.gerarToken(usuario, empresaAtivaId);
+  }
+
+  /** Reemite o token com outra empresaAtivaId — só se o usuário tiver vínculo com ela (ou for ADMIN). */
+  async trocarEmpresa(usuarioId: string, empresaId: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id: usuarioId } });
+    if (!usuario) throw new UnauthorizedException('Sessão inválida.');
+
+    if (usuario.papelGlobal === PapelUsuario.ADMIN) {
+      const empresa = await this.prisma.empresa.findUnique({ where: { id: empresaId } });
+      if (!empresa) throw new NotFoundException('Empresa não encontrada.');
+    } else {
+      const vinculo = await this.prisma.usuarioEmpresa.findUnique({
+        where: { usuarioId_empresaId: { usuarioId, empresaId } },
+      });
+      if (!vinculo) throw new ForbiddenException('Você não tem acesso a esta empresa.');
+    }
+
+    return this.gerarToken(usuario, empresaId);
   }
 
   private gerarToken(

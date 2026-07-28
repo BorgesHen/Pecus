@@ -14,9 +14,9 @@ import { PrismaService } from '../../prisma/prisma.service';
  * ADMIN e RESPONSAVEL passam direto (o responsável é dono da fazenda).
  * O USUARIO só passa se tiver o nível de acesso exigido no módulo.
  *
- * Uso: aplique junto do @Permissao() nas rotas que quiser proteger de forma fina.
- * Precisa ser registrado explicitamente no controller (não é global) para não
- * exigir permissão em rotas que não a declararam.
+ * Uso: aplique @Permissao(modulo, nivel) nas rotas que quiser proteger de
+ * forma fina. Registrado global em app.module.ts — sem @Permissao() na rota,
+ * este guard libera (não exige nada).
  */
 @Injectable()
 export class PermissoesGuard implements CanActivate {

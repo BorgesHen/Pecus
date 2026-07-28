@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { login } from '@/lib/auth';
+import { CampoSenha } from '@/components/CampoSenha';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
@@ -16,7 +17,7 @@ export default function LoginPage() {
     setErro('');
     setCarregando(true);
     try {
-      await login(email, senha);
+      await login(usuario, senha);
       router.push('/dashboard');
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Falha ao entrar');
@@ -36,26 +37,22 @@ export default function LoginPage() {
         {erro && <div className="erro">{erro}</div>}
 
         <div className="campo">
-          <label>E-mail</label>
+          <label>Usuário</label>
           <input
             className="input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && entrar()}
           />
         </div>
 
-        <div className="campo">
-          <label>Senha</label>
-          <input
-            className="input"
-            type="password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && entrar()}
-          />
-        </div>
+        <CampoSenha
+          label="Senha"
+          value={senha}
+          onChange={setSenha}
+          onKeyDown={(e) => e.key === 'Enter' && entrar()}
+        />
 
         <button className="btn" style={{ width: '100%' }} onClick={entrar} disabled={carregando}>
           {carregando ? 'Entrando...' : 'Entrar'}
