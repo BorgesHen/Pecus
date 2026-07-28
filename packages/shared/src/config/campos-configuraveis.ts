@@ -29,7 +29,7 @@ export const TELAS_CAMPOS_CONFIGURAVEIS: Record<string, TelaCamposConfiguravel> 
       campo('lotes', 'pesoMedioEntrada', 'Peso médio de entrada'),
       campo('lotes', 'metodoManejoId', 'Método de manejo'),
       campo('lotes', 'rendimentoCarcaca', 'Rendimento de carcaça'),
-      campo('lotes', 'areaHectares', 'Área de pasto (hectares)'),
+      campo('lotes', 'areaId', 'Área'),
       campo('lotes', 'gmdEsperado', 'GMD esperado'),
     ],
   },
@@ -68,6 +68,17 @@ export const TELAS_CAMPOS_CONFIGURAVEIS: Record<string, TelaCamposConfiguravel> 
   estoque: {
     label: 'Estoque',
     campos: [campo('estoque', 'estoqueMinimo', 'Estoque mínimo')],
+  },
+  lancamentos: {
+    label: 'Lançamentos financeiros',
+    campos: [
+      campo('lancamentos', 'loteId', 'Projeto (lote)'),
+      campo('lancamentos', 'contatoId', 'Contato'),
+      campo('lancamentos', 'contaBancariaId', 'Banco'),
+      campo('lancamentos', 'formaPagamento', 'Forma de pagamento'),
+      campo('lancamentos', 'descricao', 'Descrição'),
+      campo('lancamentos', 'documento', 'Documento'),
+    ],
   },
 };
 

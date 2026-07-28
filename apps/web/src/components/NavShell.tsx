@@ -26,11 +26,13 @@ interface ItemNav {
 const ITENS: ItemNav[] = [
   { href: '/dashboard', label: 'Visão geral' },
   { href: '/lotes', label: 'Lotes', modulo: ModuloSistema.LOTES },
+  { href: '/areas', label: 'Áreas', modulo: ModuloSistema.AREAS },
   { href: '/animais', label: 'Animais', modulo: ModuloSistema.ANIMAIS },
   { href: '/sanidade', label: 'Sanidade', modulo: ModuloSistema.SANIDADE },
   { href: '/reproducao', label: 'Reprodução', modulo: ModuloSistema.REPRODUCAO },
   { href: '/insumos', label: 'Estoque', modulo: ModuloSistema.ESTOQUE },
   { href: '/gastos', label: 'Gastos', modulo: ModuloSistema.GASTOS },
+  { href: '/financeiro', label: 'Financeiro', modulo: ModuloSistema.FINANCEIRO },
   { href: '/relatorios', label: 'Relatórios', modulo: ModuloSistema.RELATORIOS },
   {
     href: '/metodos-manejo',

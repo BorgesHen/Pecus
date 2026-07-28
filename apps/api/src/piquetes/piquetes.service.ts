@@ -6,25 +6,25 @@ import { CriarPiqueteDto, AtualizarPiqueteDto, RegistrarAlturaDto, MoverGadoDto 
 export class PiquetesService {
   constructor(private prisma: PrismaService) {}
 
-  private async garantirLoteDaEmpresa(empresaId: string, loteId: string) {
-    const lote = await this.prisma.lote.findFirst({ where: { id: loteId, empresaId } });
-    if (!lote) throw new NotFoundException('Lote não encontrado nesta empresa.');
+  private async garantirAreaDaEmpresa(empresaId: string, areaId: string) {
+    const area = await this.prisma.area.findFirst({ where: { id: areaId, empresaId } });
+    if (!area) throw new NotFoundException('Área não encontrada nesta empresa.');
   }
 
   private async garantirPiqueteDaEmpresa(empresaId: string, piqueteId: string) {
     const piquete = await this.prisma.piquete.findFirst({
-      where: { id: piqueteId, lote: { empresaId } },
+      where: { id: piqueteId, area: { empresaId } },
     });
     if (!piquete) throw new NotFoundException('Piquete não encontrado nesta empresa.');
     return piquete;
   }
 
-  async listarPorLote(empresaId: string, loteId: string) {
-    await this.garantirLoteDaEmpresa(empresaId, loteId);
+  async listarPorArea(empresaId: string, areaId: string) {
+    await this.garantirAreaDaEmpresa(empresaId, areaId);
 
     const [piquetes, empresa] = await Promise.all([
       this.prisma.piquete.findMany({
-        where: { loteId },
+        where: { areaId },
         include: {
           registrosAltura: { orderBy: { data: 'desc' }, take: 1 },
           ocupacoes: { where: { dataFim: null } },
@@ -44,10 +44,10 @@ export class PiquetesService {
   }
 
   async criar(empresaId: string, dto: CriarPiqueteDto) {
-    await this.garantirLoteDaEmpresa(empresaId, dto.loteId);
+    await this.garantirAreaDaEmpresa(empresaId, dto.areaId);
     return this.prisma.piquete.create({
       data: {
-        loteId: dto.loteId,
+        areaId: dto.areaId,
         nome: dto.nome,
         areaHectares: dto.areaHectares,
         alturaIdealCm: dto.alturaIdealCm,
@@ -81,14 +81,14 @@ export class PiquetesService {
     });
   }
 
-  /** Fecha a ocupação aberta de qualquer piquete do lote e abre uma nova neste — só um piquete concentra o gado por vez. */
+  /** Fecha a ocupação aberta de qualquer piquete da área e abre uma nova neste — só um piquete concentra o gado por vez. */
   async moverGado(empresaId: string, piqueteId: string, dto: MoverGadoDto) {
     const piqueteDestino = await this.garantirPiqueteDaEmpresa(empresaId, piqueteId);
     const dataMovimento = new Date(dto.data);
 
     return this.prisma.$transaction(async (tx) => {
       const ocupacaoAberta = await tx.ocupacaoPiquete.findFirst({
-        where: { piquete: { loteId: piqueteDestino.loteId }, dataFim: null },
+        where: { piquete: { areaId: piqueteDestino.areaId }, dataFim: null },
       });
 
       if (ocupacaoAberta) {

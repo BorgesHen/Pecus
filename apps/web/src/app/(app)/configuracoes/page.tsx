@@ -18,7 +18,8 @@ const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.REPRODUCAO]: 'Estação de monta, diagnóstico de gestação, partos.',
   [ModuloSistema.ESTOQUE]: 'Controle de saldo de insumos (ração, suplemento etc.).',
   [ModuloSistema.METODOS_MANEJO]: 'Tela de gestão de métodos de manejo customizados.',
-  [ModuloSistema.PIQUETES]: 'Subdivisão da área de pasto em piquetes, com controle de altura e rotação do gado.',
+  [ModuloSistema.AREAS]: 'Cadastro de áreas de pasto, com subdivisão em piquetes e controle de altura do capim.',
+  [ModuloSistema.FINANCEIRO]: 'Plano de contas, contas a pagar/receber, bancos e contatos.',
 };
 
 export default function ConfiguracoesPage() {

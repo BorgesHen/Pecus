@@ -6,15 +6,15 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ModuloAtivo } from '../common/decorators/modulo-ativo.decorator';
 import { Permissao } from '../common/decorators/permissao.decorator';
 
-@ModuloAtivo(ModuloSistema.PIQUETES)
+@ModuloAtivo(ModuloSistema.AREAS)
 @Controller('piquetes')
 export class PiquetesController {
   constructor(private piquetesService: PiquetesService) {}
 
   @Permissao(ModuloSistema.PIQUETES, NivelAcesso.VER)
   @Get()
-  listar(@CurrentUser() user: UsuarioAutenticado, @Query('loteId') loteId: string) {
-    return this.piquetesService.listarPorLote(user.empresaAtivaId!, loteId);
+  listar(@CurrentUser() user: UsuarioAutenticado, @Query('areaId') areaId: string) {
+    return this.piquetesService.listarPorArea(user.empresaAtivaId!, areaId);
   }
 
   @Permissao(ModuloSistema.PIQUETES, NivelAcesso.VER)

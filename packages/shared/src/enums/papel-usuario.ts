@@ -20,6 +20,8 @@ export enum ModuloSistema {
   ESTOQUE = 'estoque',
   METODOS_MANEJO = 'metodos-manejo',
   PIQUETES = 'piquetes',
+  AREAS = 'areas',
+  FINANCEIRO = 'financeiro',
 }
 
 export const LABEL_MODULO_SISTEMA: Record<ModuloSistema, string> = {
@@ -34,6 +36,8 @@ export const LABEL_MODULO_SISTEMA: Record<ModuloSistema, string> = {
   [ModuloSistema.ESTOQUE]: 'Estoque',
   [ModuloSistema.METODOS_MANEJO]: 'Métodos de manejo',
   [ModuloSistema.PIQUETES]: 'Piquetes',
+  [ModuloSistema.AREAS]: 'Áreas',
+  [ModuloSistema.FINANCEIRO]: 'Financeiro',
 };
 
 /**
@@ -47,7 +51,8 @@ export const MODULOS_CONFIGURAVEIS: ModuloSistema[] = [
   ModuloSistema.REPRODUCAO,
   ModuloSistema.ESTOQUE,
   ModuloSistema.METODOS_MANEJO,
-  ModuloSistema.PIQUETES,
+  ModuloSistema.AREAS,
+  ModuloSistema.FINANCEIRO,
 ];
 
 /**
@@ -61,7 +66,8 @@ export const CAMPO_MODULO_ATIVO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.REPRODUCAO]: 'moduloReproducaoAtivo',
   [ModuloSistema.ESTOQUE]: 'moduloEstoqueAtivo',
   [ModuloSistema.METODOS_MANEJO]: 'moduloMetodosManejoAtivo',
-  [ModuloSistema.PIQUETES]: 'moduloPiquetesAtivo',
+  [ModuloSistema.AREAS]: 'moduloAreasAtivo',
+  [ModuloSistema.FINANCEIRO]: 'moduloFinanceiroAtivo',
 };
 
 /** Nível de acesso de um usuário a um módulo. */
@@ -81,7 +87,8 @@ export interface ConfiguracaoEmpresa {
   moduloReproducaoAtivo: boolean;
   moduloEstoqueAtivo: boolean;
   moduloMetodosManejoAtivo: boolean;
-  moduloPiquetesAtivo: boolean;
+  moduloAreasAtivo: boolean;
+  moduloFinanceiroAtivo: boolean;
   rendimentoCarcacaPadrao: number;
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;

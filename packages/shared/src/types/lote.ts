@@ -11,12 +11,12 @@ export interface Lote {
   id: string;
   empresaId: string;
   metodoManejoId?: string | null;
+  areaId?: string | null;
   identificacao: string; // ex: "Lote 01/2026"
   dataAquisicao: string;
   quantidadeAnimais: number;
   pesoMedioEntrada?: number | null; // kg
   rendimentoCarcaca?: number | null; // % — se nulo, cálculos assumem 52
-  areaHectares?: number | null;
   gmdEsperado?: number | null; // kg/dia, meta de referência
   createdAt: string;
 }

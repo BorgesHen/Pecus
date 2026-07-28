@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Lote, Gasto, Pesagem, MetodoManejo, LoteMetodoHistorico, TipoMetodoManejo } from '@pecus/shared';
+import type { Lote, Area, Gasto, Pesagem, MetodoManejo, LoteMetodoHistorico, TipoMetodoManejo } from '@pecus/shared';
 
 export interface LoteComContagem extends Lote {
   metodoManejo?: MetodoManejo | null;
@@ -8,6 +8,7 @@ export interface LoteComContagem extends Lote {
 
 export interface LoteDetalhado extends Lote {
   metodoManejo?: MetodoManejo | null;
+  area?: Area | null;
   pesagens: Pesagem[];
   gastos: Gasto[];
   metodoHistorico: LoteMetodoHistorico[];
@@ -19,14 +20,14 @@ export interface NovoLote {
   quantidadeAnimais: number;
   pesoMedioEntrada?: number;
   metodoManejoId?: string;
+  areaId?: string;
   rendimentoCarcaca?: number;
-  areaHectares?: number;
   gmdEsperado?: number;
 }
 
 export interface ParametrosLote {
+  areaId?: string;
   rendimentoCarcaca?: number;
-  areaHectares?: number;
   gmdEsperado?: number;
 }
 

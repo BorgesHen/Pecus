@@ -43,7 +43,11 @@ export class AtualizarConfiguracaoEmpresaDto {
 
   @IsOptional()
   @IsBoolean()
-  moduloPiquetesAtivo?: boolean;
+  moduloAreasAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  moduloFinanceiroAtivo?: boolean;
 
   @IsOptional()
   @IsNumber()

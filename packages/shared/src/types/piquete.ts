@@ -1,7 +1,7 @@
-/** Subdivisão da área de pasto do lote (pastejo rotacionado). */
+/** Subdivisão da área de pasto (pastejo rotacionado). */
 export interface Piquete {
   id: string;
-  loteId: string;
+  areaId: string;
   nome: string;
   areaHectares?: number | null;
   /** Override por piquete; se nulo, usa Empresa.alturaIdealPastoPadrao. */
@@ -18,7 +18,7 @@ export interface RegistroAlturaPasto {
   createdAt: string;
 }
 
-/** Fase em que o piquete concentrou o gado do lote. dataFim nula = ocupado agora. */
+/** Fase em que o piquete concentrou o gado da área. dataFim nula = ocupado agora. */
 export interface OcupacaoPiquete {
   id: string;
   piqueteId: string;

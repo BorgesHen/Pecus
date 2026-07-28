@@ -20,15 +20,14 @@ export class CriarLoteDto {
   metodoManejoId?: string;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  rendimentoCarcaca?: number;
+  @IsString()
+  areaId?: string;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  areaHectares?: number;
+  @Max(100)
+  rendimentoCarcaca?: number;
 
   @IsOptional()
   @IsNumber()
@@ -55,15 +54,14 @@ export class AtualizarLoteDto {
   pesoMedioEntrada?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  rendimentoCarcaca?: number;
+  @IsString()
+  areaId?: string;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  areaHectares?: number;
+  @Max(100)
+  rendimentoCarcaca?: number;
 
   @IsOptional()
   @IsNumber()

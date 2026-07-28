@@ -11,6 +11,11 @@ export class LotesService {
     private empresasService: EmpresasService,
   ) {}
 
+  private async garantirAreaDaEmpresa(empresaId: string, areaId: string) {
+    const area = await this.prisma.area.findFirst({ where: { id: areaId, empresaId } });
+    if (!area) throw new NotFoundException('Área não encontrada nesta empresa.');
+  }
+
   listar(empresaId: string) {
     return this.prisma.lote.findMany({
       where: { empresaId },
@@ -24,6 +29,7 @@ export class LotesService {
       where: { id, empresaId },
       include: {
         metodoManejo: true,
+        area: true,
         pesagens: { orderBy: { data: 'asc' } },
         gastos: { orderBy: { data: 'desc' } },
         metodoHistorico: { include: { metodoManejo: true }, orderBy: { dataInicio: 'desc' } },
@@ -36,6 +42,7 @@ export class LotesService {
   async criar(empresaId: string, dtoOriginal: CriarLoteDto) {
     const camposDesativados = await this.empresasService.obterCamposDesativados(empresaId);
     const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
+    if (dto.areaId) await this.garantirAreaDaEmpresa(empresaId, dto.areaId);
     const dataAquisicao = new Date(dto.dataAquisicao);
     return this.prisma.$transaction(async (tx) => {
       const lote = await tx.lote.create({
@@ -46,8 +53,8 @@ export class LotesService {
           quantidadeAnimais: dto.quantidadeAnimais,
           pesoMedioEntrada: dto.pesoMedioEntrada,
           metodoManejoId: dto.metodoManejoId,
+          areaId: dto.areaId,
           rendimentoCarcaca: dto.rendimentoCarcaca,
-          areaHectares: dto.areaHectares,
           gmdEsperado: dto.gmdEsperado,
         },
       });
@@ -66,6 +73,7 @@ export class LotesService {
     await this.detalhar(empresaId, id);
     const camposDesativados = await this.empresasService.obterCamposDesativados(empresaId);
     const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
+    if (dto.areaId) await this.garantirAreaDaEmpresa(empresaId, dto.areaId);
     return this.prisma.lote.update({
       where: { id },
       data: {

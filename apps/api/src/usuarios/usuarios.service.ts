@@ -17,6 +17,8 @@ const PERMISSOES_ACESSO_TOTAL: PermissoesGranulares = {
   [ModuloSistema.ESTOQUE]: NivelAcesso.EDITAR,
   [ModuloSistema.METODOS_MANEJO]: NivelAcesso.EDITAR,
   [ModuloSistema.PIQUETES]: NivelAcesso.EDITAR,
+  [ModuloSistema.AREAS]: NivelAcesso.EDITAR,
+  [ModuloSistema.FINANCEIRO]: NivelAcesso.EDITAR,
 };
 
 @Injectable()

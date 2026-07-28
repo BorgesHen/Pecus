@@ -2,7 +2,7 @@ import { IsDateString, IsNumber, IsOptional, IsString, Min } from 'class-validat
 
 export class CriarPiqueteDto {
   @IsString()
-  loteId: string;
+  areaId: string;
 
   @IsString()
   nome: string;

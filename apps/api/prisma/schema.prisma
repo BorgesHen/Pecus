@@ -68,6 +68,27 @@ enum TipoMovimentoInsumo {
   SAIDA
 }
 
+enum NaturezaFinanceira {
+  RECEITA
+  DESPESA
+}
+
+enum FormaPagamento {
+  PIX
+  BOLETO
+  FATURA
+  DEBITO_AUTOMATICO
+  TRANSFERENCIA
+  DINHEIRO
+  OUTRO
+}
+
+enum TipoContato {
+  CLIENTE
+  FORNECEDOR
+  AMBOS
+}
+
 model Empresa {
   id        String   @id @default(uuid())
   nome      String
@@ -81,7 +102,8 @@ model Empresa {
   moduloReproducaoAtivo    Boolean @default(true)
   moduloEstoqueAtivo       Boolean @default(true)
   moduloMetodosManejoAtivo Boolean @default(true)
-  moduloPiquetesAtivo      Boolean @default(true)
+  moduloAreasAtivo         Boolean @default(true)
+  moduloFinanceiroAtivo    Boolean @default(true)
 
   // Valores-padrão configuráveis pela fazenda.
   rendimentoCarcacaPadrao    Float @default(52)
@@ -96,6 +118,7 @@ model Empresa {
 
   usuarios      UsuarioEmpresa[]
   lotes         Lote[]
+  areas         Area[]
   gastos        Gasto[]
   metodosManejo MetodoManejo[]
   animais       Animal[]
@@ -103,6 +126,10 @@ model Empresa {
   eventosReprodutivos EventoReprodutivo[]
   insumos Insumo[]
   movimentosInsumo MovimentoInsumo[]
+  gruposFinanceiros GrupoFinanceiro[]
+  contasBancarias   ContaBancaria[]
+  contatos          Contato[]
+  lancamentos       Lancamento[]
 }
 
 model Usuario {
@@ -152,36 +179,51 @@ model Lote {
   id                String   @id @default(uuid())
   empresaId         String
   metodoManejoId    String?
+  areaId            String?
   identificacao     String
   dataAquisicao     DateTime
   quantidadeAnimais Int
   pesoMedioEntrada  Float?   // kg
   /// % que vira carcaça (ex: 52). Se nulo, relatorios.service.ts usa 52 como padrão.
   rendimentoCarcaca Float?
-  areaHectares      Float?   // ha — usado por métodos a pasto (lotação, ganho/ha)
   gmdEsperado       Float?   // kg/dia — meta de referência p/ comparar com o GMD real
   createdAt         DateTime @default(now())
 
   empresa         Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   metodoManejo    MetodoManejo?          @relation(fields: [metodoManejoId], references: [id])
+  area            Area?                  @relation(fields: [areaId], references: [id], onDelete: SetNull)
   pesagens        Pesagem[]
   gastos          Gasto[]
   metodoHistorico LoteMetodoHistorico[]
   animais         Animal[]
-  piquetes        Piquete[]
+  lancamentos     Lancamento[]
 }
 
-/// Subdivisão da área de pasto do lote (pastejo rotacionado).
+/// Área de pasto — separada do Lote (que é só organização de animais). Se
+/// subdivide em Piquetes pra pastejo rotacionado.
+model Area {
+  id           String   @id @default(uuid())
+  empresaId    String
+  nome         String
+  areaHectares Float?
+  createdAt    DateTime @default(now())
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lotes    Lote[]
+  piquetes Piquete[]
+}
+
+/// Subdivisão da área de pasto (pastejo rotacionado).
 model Piquete {
   id            String   @id @default(uuid())
-  loteId        String
+  areaId        String
   nome          String
   areaHectares  Float?
   /// Override por piquete; se nulo, usa Empresa.alturaIdealPastoPadrao.
   alturaIdealCm Float?
   createdAt     DateTime @default(now())
 
-  lote            Lote                  @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  area            Area                  @relation(fields: [areaId], references: [id], onDelete: Cascade)
   registrosAltura RegistroAlturaPasto[]
   ocupacoes       OcupacaoPiquete[]
 }
@@ -340,4 +382,94 @@ model MovimentoInsumo {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   insumo  Insumo  @relation(fields: [insumoId], references: [id], onDelete: Cascade)
   gasto   Gasto?  @relation(fields: [gastoId], references: [id])
+}
+
+/// Grupo de nível 1 do plano de contas financeiro (ex: "Custos Variáveis").
+/// Sempre pertence a uma empresa (permite ativar/desativar conta por conta
+/// sem afetar outras fazendas — por isso não é global como MetodoManejo).
+model GrupoFinanceiro {
+  id        String             @id @default(uuid())
+  empresaId String
+  natureza  NaturezaFinanceira
+  codigo    String
+  nome      String
+  ordem     Int                @default(0)
+
+  empresa Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  contas  ContaFinanceira[]
+
+  @@unique([empresaId, codigo])
+}
+
+/// Subcategoria de nível 2 do plano de contas (ex: "Ração").
+model ContaFinanceira {
+  id      String  @id @default(uuid())
+  grupoId String
+  codigo  String
+  nome    String
+  ativo   Boolean @default(true)
+
+  grupo       GrupoFinanceiro @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  lancamentos Lancamento[]
+
+  @@unique([grupoId, codigo])
+}
+
+model ContaBancaria {
+  id               String    @id @default(uuid())
+  empresaId        String
+  nome             String
+  saldoInicial     Decimal   @default(0) @db.Decimal(14, 2)
+  dataSaldoInicial DateTime?
+  ativo            Boolean   @default(true)
+
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lancamentos Lancamento[]
+}
+
+model Contato {
+  id        String      @id @default(uuid())
+  empresaId String
+  tipo      TipoContato
+  nome      String
+  documento String?
+  telefone  String?
+  email     String?
+
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lancamentos Lancamento[]
+}
+
+/// Lançamento financeiro (conta a pagar/receber). Lançamentos parcelados são
+/// expandidos em N linhas na criação — cada parcela é sua própria linha,
+/// independente (ver financeiro/lancamentos.service.ts).
+model Lancamento {
+  id              String          @id @default(uuid())
+  empresaId       String
+  contaId         String
+  loteId          String? // "projeto" — null = geral/consolidado da fazenda
+  contatoId       String?
+  contaBancariaId String?
+  formaPagamento  FormaPagamento?
+  descricao       String?
+  documento       String?
+
+  valorTotal    Decimal @db.Decimal(14, 2)
+  totalParcelas Int     @default(1)
+  numeroParcela Int     @default(1)
+  valorParcela  Decimal @db.Decimal(14, 2)
+
+  dataDocumento  DateTime
+  dataVencimento DateTime
+  /// Pago (SAÍDA) ou recebido (ENTRADA); null = em aberto.
+  dataLiquidacao DateTime?
+
+  empresa       Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  conta         ContaFinanceira @relation(fields: [contaId], references: [id])
+  lote          Lote?           @relation(fields: [loteId], references: [id])
+  contato       Contato?        @relation(fields: [contatoId], references: [id])
+  contaBancaria ContaBancaria?  @relation(fields: [contaBancariaId], references: [id])
+
+  @@index([empresaId, dataDocumento])
+  @@index([empresaId, dataLiquidacao])
 }

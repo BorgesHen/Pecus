@@ -11,6 +11,7 @@ import { PapelUsuario as PapelUsuarioPrisma } from '@prisma/client';
 import { PapelUsuario } from '@pecus/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegistrarDto } from './dto/auth.dto';
+import { PLANO_CONTAS_PADRAO } from '../financeiro/plano-contas-padrao';
 
 @Injectable()
 export class AuthService {
@@ -71,6 +72,19 @@ export class AuthService {
           papel: PapelUsuario.RESPONSAVEL,
         },
       });
+
+      for (const grupo of PLANO_CONTAS_PADRAO) {
+        await tx.grupoFinanceiro.create({
+          data: {
+            empresaId: empresa.id,
+            natureza: grupo.natureza,
+            codigo: grupo.codigo,
+            nome: grupo.nome,
+            ordem: grupo.ordem,
+            contas: { create: grupo.contas },
+          },
+        });
+      }
 
       return { usuario, empresa };
     });

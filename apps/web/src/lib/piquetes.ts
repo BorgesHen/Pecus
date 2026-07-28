@@ -8,7 +8,7 @@ export interface PiqueteComStatus extends Piquete {
 }
 
 export interface NovoPiquete {
-  loteId: string;
+  areaId: string;
   nome: string;
   areaHectares?: number;
   alturaIdealCm?: number;
@@ -20,8 +20,8 @@ export interface ParametrosPiquete {
   alturaIdealCm?: number;
 }
 
-export function listarPiquetes(loteId: string) {
-  return api<PiqueteComStatus[]>(`/piquetes?loteId=${loteId}`);
+export function listarPiquetes(areaId: string) {
+  return api<PiqueteComStatus[]>(`/piquetes?areaId=${areaId}`);
 }
 
 export function criarPiquete(dados: NovoPiquete) {

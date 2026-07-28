@@ -8,7 +8,8 @@ export interface Empresa {
   moduloReproducaoAtivo: boolean;
   moduloEstoqueAtivo: boolean;
   moduloMetodosManejoAtivo: boolean;
-  moduloPiquetesAtivo: boolean;
+  moduloAreasAtivo: boolean;
+  moduloFinanceiroAtivo: boolean;
   rendimentoCarcacaPadrao: number;
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;

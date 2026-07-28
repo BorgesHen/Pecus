@@ -1,5 +1,6 @@
 import { PrismaClient, PapelUsuario, TipoMetodoManejo } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { PLANO_CONTAS_PADRAO } from '../src/financeiro/plano-contas-padrao';
 
 const prisma = new PrismaClient();
 
@@ -40,6 +41,30 @@ async function main() {
       },
     });
     console.log(`Admin criado: ${adminEmail} / senha: admin123`);
+  }
+
+  // Plano de contas padrão para empresas já existentes que ainda não têm um
+  // (fazendas criadas antes do módulo Financeiro existir).
+  const empresasSemPlanoContas = await prisma.empresa.findMany({
+    where: { gruposFinanceiros: { none: {} } },
+    select: { id: true },
+  });
+  for (const { id: empresaId } of empresasSemPlanoContas) {
+    for (const grupo of PLANO_CONTAS_PADRAO) {
+      await prisma.grupoFinanceiro.create({
+        data: {
+          empresaId,
+          natureza: grupo.natureza,
+          codigo: grupo.codigo,
+          nome: grupo.nome,
+          ordem: grupo.ordem,
+          contas: { create: grupo.contas },
+        },
+      });
+    }
+  }
+  if (empresasSemPlanoContas.length > 0) {
+    console.log(`Plano de contas padrão criado para ${empresasSemPlanoContas.length} empresa(s).`);
   }
 
   console.log('Seed concluído.');

@@ -101,6 +101,7 @@ export class RelatoriosService {
         where: { id: loteId, empresaId },
         include: {
           metodoManejo: true,
+          area: true,
           pesagens: { orderBy: { data: 'asc' } },
           gastos: true,
           metodoHistorico: { include: { metodoManejo: true }, orderBy: { dataInicio: 'desc' } },
@@ -169,11 +170,11 @@ export class RelatoriosService {
       metodoManejo.tipo === TipoMetodoManejo.SEMICONFINAMENTO ||
       metodoManejo.tipo === TipoMetodoManejo.TIP
     ) {
-      if (lote.areaHectares) {
+      if (lote.area?.areaHectares) {
         indicadores.lotacaoUaHa = Number(
-          ((pesoAtual * lote.quantidadeAnimais) / KG_POR_UA / lote.areaHectares).toFixed(2),
+          ((pesoAtual * lote.quantidadeAnimais) / KG_POR_UA / lote.area.areaHectares).toFixed(2),
         );
-        indicadores.ganhoPorHectare = Number((ganhoTotalKgFase / lote.areaHectares).toFixed(2));
+        indicadores.ganhoPorHectare = Number((ganhoTotalKgFase / lote.area.areaHectares).toFixed(2));
       } else {
         indicadores.lotacaoUaHa = null;
         indicadores.ganhoPorHectare = null;

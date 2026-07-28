@@ -11,6 +11,7 @@ import {
   type LoteComContagem,
   type NovoLote,
 } from '@/lib/lotes';
+import { listarAreas, type AreaComContagem } from '@/lib/areas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
@@ -20,8 +21,8 @@ const FORM_VAZIO: NovoLote = {
   quantidadeAnimais: 1,
   pesoMedioEntrada: undefined,
   metodoManejoId: undefined,
+  areaId: undefined,
   rendimentoCarcaca: undefined,
-  areaHectares: undefined,
   gmdEsperado: undefined,
 };
 
@@ -31,6 +32,7 @@ export default function LotesPage() {
   const podeEditarLotes = podeEditar(ModuloSistema.LOTES);
   const [lotes, setLotes] = useState<LoteComContagem[] | null>(null);
   const [metodos, setMetodos] = useState<MetodoManejo[]>([]);
+  const [areas, setAreas] = useState<AreaComContagem[]>([]);
   const [erro, setErro] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState<NovoLote>(FORM_VAZIO);
@@ -46,6 +48,7 @@ export default function LotesPage() {
   useEffect(() => {
     carregar();
     listarMetodosManejo().then(setMetodos).catch(() => {});
+    listarAreas().then(setAreas).catch(() => {});
   }, []);
 
   function abrirModal() {
@@ -272,20 +275,21 @@ export default function LotesPage() {
               )}
             </div>
 
-            {usaPasto && campoAtivo('lotes.areaHectares') && (
+            {usaPasto && campoAtivo('lotes.areaId') && (
               <div className="campo">
-                <label>Área de pasto (ha)</label>
-                <input
+                <label>Área</label>
+                <select
                   className="input"
-                  type="number"
-                  value={form.areaHectares ?? ''}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      areaHectares: e.target.value ? Number(e.target.value) : undefined,
-                    })
-                  }
-                />
+                  value={form.areaId ?? ''}
+                  onChange={(e) => setForm({ ...form, areaId: e.target.value || undefined })}
+                >
+                  <option value="">Não definida</option>
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
