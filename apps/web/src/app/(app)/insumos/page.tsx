@@ -10,6 +10,7 @@ import {
   type NovoInsumo,
 } from '@/lib/insumos';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoInsumo = { nome: '', unidade: 'kg', estoqueMinimo: undefined };
 
@@ -215,6 +216,7 @@ export default function InsumosPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={dataConsumo}
                   onChange={(e) => setDataConsumo(e.target.value)}
                 />

@@ -9,6 +9,7 @@ export class CriarLoteDto {
 
   @IsInt()
   @Min(1)
+  @Max(100000)
   quantidadeAnimais: number;
 
   @IsOptional()
@@ -47,6 +48,7 @@ export class AtualizarLoteDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Max(100000)
   quantidadeAnimais?: number;
 
   @IsOptional()

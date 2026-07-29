@@ -14,10 +14,11 @@ import {
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
+import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoLote = {
   identificacao: '',
-  dataAquisicao: new Date().toISOString().slice(0, 10),
+  dataAquisicao: hojeISO(),
   quantidadeAnimais: 1,
   pesoMedioEntrada: undefined,
   metodoManejoId: undefined,
@@ -180,6 +181,7 @@ export default function LotesPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.dataAquisicao}
                   onChange={(e) => setForm({ ...form, dataAquisicao: e.target.value })}
                 />
@@ -194,7 +196,8 @@ export default function LotesPage() {
                   value={form.quantidadeAnimais === 0 ? '' : form.quantidadeAnimais}
                   onChange={(e) => {
                     const digitos = e.target.value.replace(/\D/g, '');
-                    setForm({ ...form, quantidadeAnimais: digitos ? Number(digitos) : 0 });
+                    const numero = digitos ? Math.min(Number(digitos), 100000) : 0;
+                    setForm({ ...form, quantidadeAnimais: numero });
                   }}
                 />
               </div>

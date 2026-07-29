@@ -13,6 +13,7 @@ import {
 } from '@pecus/shared';
 import { listarAnimais, criarAnimal, type AnimalComLote, type NovoAnimal } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
+import { hojeISO } from '@/lib/data';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 
 const FORM_VAZIO: NovoAnimal = {
@@ -232,6 +233,7 @@ export default function AnimaisPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.dataEntrada}
                   onChange={(e) => setForm({ ...form, dataEntrada: e.target.value })}
                 />
@@ -242,6 +244,7 @@ export default function AnimaisPage() {
                   <input
                     className="input"
                     type="date"
+                    max={hojeISO()}
                     value={form.dataNascimento ?? ''}
                     onChange={(e) => setForm({ ...form, dataNascimento: e.target.value || undefined })}
                   />

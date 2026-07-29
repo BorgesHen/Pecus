@@ -13,6 +13,7 @@ import {
 } from '@/lib/lotes';
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
 import { criarPesagem, obterGmd, type Gmd } from '@/lib/pesagens';
+import { hojeISO } from '@/lib/data';
 import { indicadoresMetodo, type IndicadoresMetodo } from '@/lib/relatorios';
 import { listarAnimais } from '@/lib/animais';
 import { usePermissoes } from '@/contexts/PermissoesContext';
@@ -396,7 +397,13 @@ export default function DetalheLotePage() {
             <div className="linha-campos">
               <div className="campo">
                 <label>Data</label>
-                <input className="input" type="date" value={data} onChange={(e) => setData(e.target.value)} />
+                <input
+                  className="input"
+                  type="date"
+                  max={hojeISO()}
+                  value={data}
+                  onChange={(e) => setData(e.target.value)}
+                />
               </div>
               <div className="campo">
                 <label>Peso médio (kg)</label>
@@ -509,6 +516,7 @@ export default function DetalheLotePage() {
               <input
                 className="input"
                 type="date"
+                max={hojeISO()}
                 value={dataTroca}
                 onChange={(e) => setDataTroca(e.target.value)}
               />

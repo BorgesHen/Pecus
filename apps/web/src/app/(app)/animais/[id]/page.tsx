@@ -28,6 +28,7 @@ import {
   type EventoReprodutivoComCria,
 } from '@/lib/reproducao';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { hojeISO } from '@/lib/data';
 
 export default function DetalheAnimalPage() {
   const params = useParams<{ id: string }>();
@@ -291,6 +292,7 @@ export default function DetalheAnimalPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={formSanidade.data}
                   onChange={(e) => setFormSanidade({ ...formSanidade, data: e.target.value })}
                 />
@@ -392,6 +394,7 @@ export default function DetalheAnimalPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={formReproducao.data}
                   onChange={(e) => setFormReproducao({ ...formReproducao, data: e.target.value })}
                 />
@@ -451,6 +454,7 @@ export default function DetalheAnimalPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={dataSaida}
                   onChange={(e) => setDataSaida(e.target.value)}
                 />

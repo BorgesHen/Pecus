@@ -13,6 +13,7 @@ import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
 import type { Gasto } from '@pecus/shared';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { hojeISO } from '@/lib/data';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const FORM_VAZIO: NovoGasto = {
@@ -260,6 +261,7 @@ export default function GastosPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.data}
                   onChange={(e) => setForm({ ...form, data: e.target.value })}
                 />

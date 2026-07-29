@@ -13,6 +13,7 @@ import {
 import { listarAnimais, type AnimalComLote } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { hojeISO } from '@/lib/data';
 
 type Alvo = 'animal' | 'lote';
 
@@ -272,6 +273,7 @@ export default function SanidadePage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.data}
                   onChange={(e) => setForm({ ...form, data: e.target.value })}
                 />

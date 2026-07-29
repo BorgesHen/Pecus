@@ -13,6 +13,7 @@ import {
 import { listarMatrizes, criarEventoReprodutivo, type MatrizComStatus } from '@/lib/reproducao';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO = {
   animalId: '',
@@ -181,6 +182,7 @@ export default function ReproducaoPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.data}
                   onChange={(e) => setForm({ ...form, data: e.target.value })}
                 />

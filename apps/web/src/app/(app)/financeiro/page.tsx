@@ -23,6 +23,7 @@ import {
   type LancamentoDetalhado,
   type NovoLancamento,
 } from '@/lib/financeiro';
+import { hojeISO } from '@/lib/data';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import type { ContaBancaria, Contato } from '@pecus/shared';
 import { usePermissoes } from '@/contexts/PermissoesContext';
@@ -329,6 +330,7 @@ export default function FinanceiroPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={form.dataDocumento}
                   onChange={(e) => setForm({ ...form, dataDocumento: e.target.value })}
                 />
@@ -473,6 +475,7 @@ export default function FinanceiroPage() {
               <input
                 className="input"
                 type="date"
+                max={hojeISO()}
                 value={dataLiquidacao}
                 onChange={(e) => setDataLiquidacao(e.target.value)}
               />

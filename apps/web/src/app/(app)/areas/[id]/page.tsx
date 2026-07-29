@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ModuloSistema, type RegistroAlturaPasto } from '@pecus/shared';
 import { obterArea, atualizarArea, type AreaDetalhada } from '@/lib/areas';
+import { hojeISO } from '@/lib/data';
 import {
   listarPiquetes,
   criarPiquete,
@@ -496,6 +497,7 @@ export default function DetalheAreaPage() {
                 <input
                   className="input"
                   type="date"
+                  max={hojeISO()}
                   value={dataAltura}
                   onChange={(e) => setDataAltura(e.target.value)}
                 />
@@ -533,6 +535,7 @@ export default function DetalheAreaPage() {
               <input
                 className="input"
                 type="date"
+                max={hojeISO()}
                 value={dataMovimento}
                 onChange={(e) => setDataMovimento(e.target.value)}
               />
