@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { AoAparecer } from '@/components/AoAparecer';
 
 export const metadata: Metadata = {
   title: 'Pecus — Gestão completa para sua fazenda de gado',
@@ -84,7 +85,10 @@ export default function LandingPage() {
       </header>
 
       <section className="landing-hero">
-        <div>
+        <img src="/background.png" alt="" className="landing-hero-bg" />
+        <div className="landing-hero-overlay" />
+        <div className="landing-hero-conteudo">
+          <span className="landing-eyebrow landing-eyebrow--claro">Sistema de gestão rural</span>
           <h1>Gestão completa da sua fazenda, do lote ao relatório.</h1>
           <p className="landing-hero-subtitulo">
             O Pecus junta lotes, áreas, animais, sanidade, reprodução, estoque, gastos e financeiro num só
@@ -94,73 +98,88 @@ export default function LandingPage() {
             <Link href="/cadastro" className="btn">
               Comece agora
             </Link>
-            <Link href="/login" className="btn-secundario">
+            <Link href="/login" className="btn-secundario btn-secundario--claro">
               Já tenho conta
             </Link>
           </div>
         </div>
-        <img src="/background.png" alt="Gado em pasto ao entardecer" className="landing-hero-imagem" />
       </section>
 
       <section id="recursos" className="landing-secao container">
-        <div className="landing-secao-titulo">
+        <AoAparecer className="landing-secao-titulo">
+          <span className="landing-eyebrow">Recursos</span>
           <h2>Tudo que a fazenda precisa, num só sistema</h2>
           <p>Cada módulo pode ser ativado ou desativado conforme o que a sua fazenda realmente usa.</p>
-        </div>
+        </AoAparecer>
         <div className="grid-cards">
-          {RECURSOS.map((r) => (
-            <div key={r.titulo} className="card landing-recurso-card">
-              <h3>{r.titulo}</h3>
-              <p>{r.descricao}</p>
-            </div>
+          {RECURSOS.map((r, i) => (
+            <AoAparecer key={r.titulo} atraso={i * 60}>
+              <div className="card landing-recurso-card">
+                <h3>{r.titulo}</h3>
+                <p>{r.descricao}</p>
+              </div>
+            </AoAparecer>
           ))}
         </div>
       </section>
 
       <section id="como-funciona" className="landing-secao container">
-        <div className="landing-secao-titulo">
+        <AoAparecer className="landing-secao-titulo">
+          <span className="landing-eyebrow">Passo a passo</span>
           <h2>Como funciona</h2>
           <p>Três passos pra sair da planilha e ter controle de verdade.</p>
-        </div>
+        </AoAparecer>
         <div className="landing-passos">
           {PASSOS.map((p, i) => (
-            <div key={p.titulo} className="landing-passo">
-              <div className="landing-passo-numero">{i + 1}</div>
-              <h3>{p.titulo}</h3>
-              <p>{p.descricao}</p>
-            </div>
+            <AoAparecer key={p.titulo} atraso={i * 100}>
+              <div className="landing-passo">
+                <div className="landing-passo-numero">{i + 1}</div>
+                <h3>{p.titulo}</h3>
+                <p>{p.descricao}</p>
+              </div>
+            </AoAparecer>
           ))}
         </div>
       </section>
 
-      <section className="landing-cta-banner">
+      <AoAparecer className="landing-cta-banner">
         <h2>Pronto pra organizar a gestão da sua fazenda?</h2>
         <p>Cadastro rápido, sem cartão de crédito.</p>
         <Link href="/cadastro" className="btn">
           Comece agora
         </Link>
-      </section>
+      </AoAparecer>
 
       <section id="contato" className="landing-secao container">
-        <div className="landing-secao-titulo">
+        <AoAparecer className="landing-secao-titulo">
+          <span className="landing-eyebrow">Contato</span>
           <h2>Fale com a gente</h2>
           <p>Dúvidas, sugestões ou quer conhecer melhor o Pecus? É só chamar.</p>
-        </div>
+        </AoAparecer>
         <div className="landing-contato-grade">
-          <div className="card landing-contato-card">
-            <h3>WhatsApp</h3>
-            <p>(54) 99650-6468</p>
-            <a href="https://wa.me/5554996506468" className="btn-secundario" target="_blank" rel="noopener noreferrer">
-              Chamar no WhatsApp
-            </a>
-          </div>
-          <div className="card landing-contato-card">
-            <h3>E-mail</h3>
-            <p>borgesh989@gmail.com</p>
-            <a href="mailto:borgesh989@gmail.com" className="btn-secundario">
-              Enviar e-mail
-            </a>
-          </div>
+          <AoAparecer>
+            <div className="card landing-contato-card">
+              <h3>WhatsApp</h3>
+              <p>(54) 99650-6468</p>
+              <a
+                href="https://wa.me/5554996506468"
+                className="btn-secundario"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Chamar no WhatsApp
+              </a>
+            </div>
+          </AoAparecer>
+          <AoAparecer atraso={100}>
+            <div className="card landing-contato-card">
+              <h3>E-mail</h3>
+              <p>borgesh989@gmail.com</p>
+              <a href="mailto:borgesh989@gmail.com" className="btn-secundario">
+                Enviar e-mail
+              </a>
+            </div>
+          </AoAparecer>
         </div>
       </section>
 

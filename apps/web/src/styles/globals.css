@@ -637,12 +637,17 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 24px;
+  padding: 10px 24px;
 }
 .landing-logo {
-  height: 32px;
+  height: 52px;
   width: auto;
   display: block;
+}
+@media (max-width: 480px) {
+  .landing-logo {
+    height: 42px;
+  }
 }
 .landing-nav-links {
   display: flex;
@@ -663,23 +668,79 @@ a {
 }
 
 .landing-hero {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 40px;
-  align-items: center;
-  padding: 56px 24px;
+  position: relative;
+  min-height: 640px;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .landing-hero {
+    min-height: 560px;
+  }
+}
+
+.landing-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--verde);
+  background: rgba(47, 93, 58, 0.1);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+.landing-eyebrow--claro {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+.landing-hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: landing-zoom 18s ease-in-out infinite alternate;
+}
+.landing-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(20, 36, 24, 0.88) 0%,
+    rgba(20, 36, 24, 0.62) 48%,
+    rgba(20, 36, 24, 0.28) 100%
+  );
+}
+@keyframes landing-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+.landing-hero-conteudo {
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  padding: 128px 24px 56px 48px;
 }
 @media (max-width: 860px) {
-  .landing-hero {
-    grid-template-columns: 1fr;
-    padding: 32px 20px;
+  .landing-hero-conteudo {
+    padding: 108px 20px 40px 24px;
   }
 }
 .landing-hero h1 {
-  font-size: 40px;
-  line-height: 1.15;
+  font-size: 44px;
+  line-height: 1.12;
   margin-bottom: 16px;
-  color: var(--texto);
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  animation: landing-hero-entra 0.7s ease 0.05s forwards;
 }
 @media (max-width: 480px) {
   .landing-hero h1 {
@@ -688,26 +749,76 @@ a {
 }
 .landing-hero-subtitulo {
   font-size: 17px;
-  color: var(--texto-suave);
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 28px;
   max-width: 480px;
+  opacity: 0;
+  animation: landing-hero-entra 0.7s ease 0.2s forwards;
 }
 .landing-hero-ctas {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  opacity: 0;
+  animation: landing-hero-entra 0.7s ease 0.35s forwards;
 }
 .landing-hero-ctas .btn,
 .landing-hero-ctas .btn-secundario {
   font-size: 16px;
   padding: 12px 22px;
 }
-.landing-hero-imagem {
-  width: 100%;
-  height: auto;
-  border-radius: var(--raio);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-  display: block;
+.btn-secundario--claro {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+.btn-secundario--claro:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+@keyframes landing-hero-entra {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-bg {
+    animation: none;
+  }
+  .landing-hero h1,
+  .landing-hero-subtitulo,
+  .landing-hero-ctas {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.ao-aparecer {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.ao-aparecer--visivel {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Sem a classe "js" (script inline do layout não rodou — JS desativado ou falhou),
+   o conteúdo já nasce visível: nunca esconde informação real atrás de um efeito. */
+html:not(.js) .ao-aparecer {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ao-aparecer {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 .landing-secao {
@@ -727,6 +838,14 @@ a {
   font-size: 16px;
 }
 
+.landing-recurso-card {
+  border-left: 3px solid var(--verde);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.landing-recurso-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
 .landing-recurso-card h3 {
   color: var(--verde);
   font-size: 17px;
@@ -769,7 +888,7 @@ a {
 }
 
 .landing-cta-banner {
-  background: var(--verde);
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-claro) 100%);
   text-align: center;
   padding: 64px 24px;
 }
