@@ -161,7 +161,7 @@ export default function ConfiguracoesPage() {
           </div>
 
           <h3 style={{ marginBottom: 12 }}>Configurações gerais</h3>
-          <div className="linha-campos" style={{ maxWidth: 500 }}>
+          <div className="linha-campos linha-campos--rotulos-alinhados" style={{ maxWidth: 700 }}>
             <div className="campo">
               <label>Rendimento de carcaça padrão (%)</label>
               <input

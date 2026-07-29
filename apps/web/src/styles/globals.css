@@ -480,6 +480,14 @@ a {
   }
 }
 
+/* Reserva espaço pra até 2 linhas de rótulo, pra os inputs ficarem alinhados
+   mesmo quando um rótulo quebra linha e o vizinho não. */
+.linha-campos--rotulos-alinhados > .campo label {
+  min-height: 40px;
+  display: flex;
+  align-items: flex-end;
+}
+
 .topo-tela {
   display: flex;
   flex-wrap: wrap;
