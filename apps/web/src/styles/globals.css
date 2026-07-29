@@ -254,6 +254,48 @@ a {
   font-weight: 600;
 }
 
+.shell-nav-grupo {
+  display: flex;
+  flex-direction: column;
+}
+.shell-nav-linha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.shell-nav-linha .shell-nav-link {
+  flex: 1;
+  min-width: 0;
+}
+.shell-nav-seta {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 10px 8px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.shell-nav-seta:hover {
+  opacity: 1;
+}
+.shell-nav-seta--aberta {
+  transform: rotate(-180deg);
+}
+.shell-nav-filhos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px;
+}
+.shell-nav-link--filho {
+  padding-left: 28px;
+  font-size: 14px;
+}
+
 .shell-sair {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.5);

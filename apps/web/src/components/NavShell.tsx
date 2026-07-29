@@ -21,18 +21,33 @@ interface ItemNav {
   label: string;
   papeis?: PapelUsuario[];
   modulo?: ModuloSistema;
+  filhos?: ItemNav[];
 }
 
 const ITENS: ItemNav[] = [
   { href: '/dashboard', label: 'Visão geral' },
   { href: '/lotes', label: 'Lotes', modulo: ModuloSistema.LOTES },
   { href: '/areas', label: 'Áreas', modulo: ModuloSistema.AREAS },
-  { href: '/animais', label: 'Animais', modulo: ModuloSistema.ANIMAIS },
-  { href: '/sanidade', label: 'Sanidade', modulo: ModuloSistema.SANIDADE },
-  { href: '/reproducao', label: 'Reprodução', modulo: ModuloSistema.REPRODUCAO },
+  {
+    href: '/animais',
+    label: 'Animais',
+    modulo: ModuloSistema.ANIMAIS,
+    filhos: [
+      { href: '/sanidade', label: 'Sanidade', modulo: ModuloSistema.SANIDADE },
+      { href: '/reproducao', label: 'Reprodução', modulo: ModuloSistema.REPRODUCAO },
+    ],
+  },
   { href: '/insumos', label: 'Estoque', modulo: ModuloSistema.ESTOQUE },
   { href: '/gastos', label: 'Gastos', modulo: ModuloSistema.GASTOS },
-  { href: '/financeiro', label: 'Financeiro', modulo: ModuloSistema.FINANCEIRO },
+  {
+    href: '/financeiro',
+    label: 'Financeiro',
+    modulo: ModuloSistema.FINANCEIRO,
+    filhos: [
+      { href: '/financeiro/plano-contas', label: 'Plano de contas', modulo: ModuloSistema.FINANCEIRO },
+      { href: '/financeiro/contatos-bancos', label: 'Contatos e bancos', modulo: ModuloSistema.FINANCEIRO },
+    ],
+  },
   { href: '/relatorios', label: 'Relatórios', modulo: ModuloSistema.RELATORIOS },
   {
     href: '/metodos-manejo',
@@ -58,6 +73,7 @@ export function NavShell({
   const [menuAberto, setMenuAberto] = useState(false);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [trocando, setTrocando] = useState(false);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const pathname = usePathname();
   const router = useRouter();
   const { podeAcessar, configEmpresa } = usePermissoes();
@@ -73,12 +89,30 @@ export function NavShell({
     return Boolean(configEmpresa[campo]);
   }
 
-  const itensVisiveis = ITENS.filter(
-    (item) =>
+  function itemVisivel(item: ItemNav) {
+    return (
       (!item.papeis || item.papeis.includes(usuario.papelGlobal)) &&
       (!item.modulo || podeAcessar(item.modulo)) &&
-      moduloAtivoNaFazenda(item.modulo),
-  );
+      moduloAtivoNaFazenda(item.modulo)
+    );
+  }
+
+  const itensVisiveis = ITENS.filter(itemVisivel).map((item) => ({
+    ...item,
+    filhos: item.filhos?.filter(itemVisivel),
+  }));
+
+  function alternarExpandido(href: string) {
+    setExpandidos((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(href)) {
+        novo.delete(href);
+      } else {
+        novo.add(href);
+      }
+      return novo;
+    });
+  }
 
   function sair() {
     logout();
@@ -127,16 +161,53 @@ export function NavShell({
         )}
 
         <nav className="shell-nav">
-          {itensVisiveis.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`shell-nav-link ${pathname === item.href ? 'shell-nav-link--ativo' : ''}`}
-              onClick={() => setMenuAberto(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {itensVisiveis.map((item) => {
+            const temFilhos = (item.filhos?.length ?? 0) > 0;
+            const filhoAtivo = item.filhos?.some((filho) => filho.href === pathname) ?? false;
+            const expandido = filhoAtivo || expandidos.has(item.href);
+
+            return (
+              <div key={item.href} className="shell-nav-grupo">
+                <div className="shell-nav-linha">
+                  <Link
+                    href={item.href}
+                    className={`shell-nav-link ${pathname === item.href ? 'shell-nav-link--ativo' : ''}`}
+                    onClick={() => setMenuAberto(false)}
+                  >
+                    {item.label}
+                  </Link>
+                  {temFilhos && (
+                    <button
+                      type="button"
+                      className={`shell-nav-seta ${expandido ? 'shell-nav-seta--aberta' : ''}`}
+                      aria-label={expandido ? `Recolher ${item.label}` : `Expandir ${item.label}`}
+                      aria-expanded={expandido}
+                      onClick={() => alternarExpandido(item.href)}
+                    >
+                      ▾
+                    </button>
+                  )}
+                </div>
+
+                {temFilhos && expandido && (
+                  <div className="shell-nav-filhos">
+                    {item.filhos!.map((filho) => (
+                      <Link
+                        key={filho.href}
+                        href={filho.href}
+                        className={`shell-nav-link shell-nav-link--filho ${
+                          pathname === filho.href ? 'shell-nav-link--ativo' : ''
+                        }`}
+                        onClick={() => setMenuAberto(false)}
+                      >
+                        {filho.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <button className="shell-sair" onClick={sair}>
