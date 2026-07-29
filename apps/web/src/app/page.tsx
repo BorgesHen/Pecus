@@ -132,7 +132,7 @@ export default function LandingPage() {
         <div className="landing-passos">
           {PASSOS.map((p, i) => (
             <AoAparecer key={p.titulo} atraso={i * 100}>
-              <div className="landing-passo">
+              <div className="card landing-passo">
                 <div className="landing-passo-numero">{i + 1}</div>
                 <h3>{p.titulo}</h3>
                 <p>{p.descricao}</p>
@@ -160,7 +160,6 @@ export default function LandingPage() {
           <AoAparecer>
             <div className="card landing-contato-card">
               <h3>WhatsApp</h3>
-              <p>(54) 99650-6468</p>
               <a
                 href="https://wa.me/5554996506468"
                 className="btn-secundario"
@@ -174,7 +173,6 @@ export default function LandingPage() {
           <AoAparecer atraso={100}>
             <div className="card landing-contato-card">
               <h3>E-mail</h3>
-              <p>borgesh989@gmail.com</p>
               <a href="mailto:borgesh989@gmail.com" className="btn-secundario">
                 Enviar e-mail
               </a>
