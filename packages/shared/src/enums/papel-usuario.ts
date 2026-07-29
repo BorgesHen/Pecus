@@ -42,10 +42,12 @@ export const LABEL_MODULO_SISTEMA: Record<ModuloSistema, string> = {
 
 /**
  * Módulos que a fazenda pode ativar/desativar por completo no painel de
- * Configurações. Lotes/Gastos/Relatórios/Usuários/Pesagens são o núcleo do
- * sistema e não têm toggle.
+ * Configurações. Usuários/Pesagens são o núcleo do sistema e não têm toggle.
  */
 export const MODULOS_CONFIGURAVEIS: ModuloSistema[] = [
+  ModuloSistema.LOTES,
+  ModuloSistema.GASTOS,
+  ModuloSistema.RELATORIOS,
   ModuloSistema.ANIMAIS,
   ModuloSistema.SANIDADE,
   ModuloSistema.REPRODUCAO,
@@ -61,6 +63,9 @@ export const MODULOS_CONFIGURAVEIS: ModuloSistema[] = [
  * uma fonte só de verdade.
  */
 export const CAMPO_MODULO_ATIVO: Partial<Record<ModuloSistema, string>> = {
+  [ModuloSistema.LOTES]: 'moduloLotesAtivo',
+  [ModuloSistema.GASTOS]: 'moduloGastosAtivo',
+  [ModuloSistema.RELATORIOS]: 'moduloRelatoriosAtivo',
   [ModuloSistema.ANIMAIS]: 'moduloAnimaisAtivo',
   [ModuloSistema.SANIDADE]: 'moduloSanidadeAtivo',
   [ModuloSistema.REPRODUCAO]: 'moduloReproducaoAtivo',
@@ -82,6 +87,9 @@ export type PermissoesGranulares = Partial<Record<ModuloSistema, NivelAcesso>>;
 
 /** Configuração da fazenda: módulos ativos + valores-padrão (painel de Configurações). */
 export interface ConfiguracaoEmpresa {
+  moduloLotesAtivo: boolean;
+  moduloGastosAtivo: boolean;
+  moduloRelatoriosAtivo: boolean;
   moduloAnimaisAtivo: boolean;
   moduloSanidadeAtivo: boolean;
   moduloReproducaoAtivo: boolean;

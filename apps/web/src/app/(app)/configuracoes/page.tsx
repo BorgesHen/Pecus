@@ -13,6 +13,9 @@ import { obterConfiguracaoEmpresa, atualizarConfiguracaoEmpresa } from '@/lib/em
 import { usePermissoes } from '@/contexts/PermissoesContext';
 
 const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
+  [ModuloSistema.LOTES]: 'Cadastro de lotes de gado, ganho de peso e método de manejo.',
+  [ModuloSistema.GASTOS]: 'Lançamento de gastos por categoria e por lote.',
+  [ModuloSistema.RELATORIOS]: 'Dashboard, custo por arroba e indicadores por método de manejo.',
   [ModuloSistema.ANIMAIS]: 'Cadastro individual de animais dentro dos lotes.',
   [ModuloSistema.SANIDADE]: 'Vacinas, medicamentos e alertas de vencimento.',
   [ModuloSistema.REPRODUCAO]: 'Estação de monta, diagnóstico de gestação, partos.',
