@@ -1,7 +1,12 @@
 import { NotFoundException } from '@nestjs/common';
-import { PapelUsuario, CHAVES_CAMPOS_CONFIGURAVEIS } from '@pecus/shared';
+import { PapelUsuario, CHAVES_CAMPOS_CONFIGURAVEIS, CHAVES_RECURSOS_PERSONALIZADOS } from '@pecus/shared';
 import { prisma } from '../prisma';
-import type { CriarEmpresaDto, AtualizarEmpresaDto, AtualizarConfiguracaoEmpresaDto } from './dto';
+import type {
+  CriarEmpresaDto,
+  AtualizarEmpresaDto,
+  AtualizarConfiguracaoEmpresaDto,
+  AtualizarRecursosPersonalizadosDto,
+} from './dto';
 
 const CAMPOS_CONFIGURACAO = {
   moduloLotesAtivo: true,
@@ -18,13 +23,21 @@ const CAMPOS_CONFIGURACAO = {
   sanidadeDiasAvisoVencimento: true,
   alturaIdealPastoPadrao: true,
   camposDesativados: true,
+  recursosPersonalizados: true,
 } as const;
 
-/** O Prisma guarda `camposDesativados` como Json; aqui ele sempre é um array de strings. */
-function comoCamposDesativados<T extends { camposDesativados: unknown }>(
+/** O Prisma guarda `camposDesativados`/`recursosPersonalizados` como Json; aqui eles sempre são array de strings. */
+function comoCamposDesativados<T extends { camposDesativados: unknown; recursosPersonalizados: unknown }>(
   empresa: T,
-): Omit<T, 'camposDesativados'> & { camposDesativados: string[] } {
-  return { ...empresa, camposDesativados: (empresa.camposDesativados as string[]) ?? [] };
+): Omit<T, 'camposDesativados' | 'recursosPersonalizados'> & {
+  camposDesativados: string[];
+  recursosPersonalizados: string[];
+} {
+  return {
+    ...empresa,
+    camposDesativados: (empresa.camposDesativados as string[]) ?? [],
+    recursosPersonalizados: (empresa.recursosPersonalizados as string[]) ?? [],
+  };
 }
 
 /** ADMIN vê todas; demais só as empresas em que estão vinculados. */
@@ -112,4 +125,20 @@ export async function vincularUsuario(empresaId: string, usuarioId: string, pape
     update: { papel },
     create: { usuarioId, empresaId, papel },
   });
+}
+
+/**
+ * Tela "Recursos personalizados": recursos sob encomenda liberados só pra
+ * uma fazenda específica. Função exclusiva do ADMIN — o próprio responsável
+ * nem sabe que essa lista existe.
+ */
+export async function atualizarRecursosPersonalizados(empresaId: string, dto: AtualizarRecursosPersonalizadosDto) {
+  await detalhar(empresaId);
+  const recursosValidos = dto.recursos.filter((chave) => CHAVES_RECURSOS_PERSONALIZADOS.includes(chave));
+  const empresa = await prisma.empresa.update({
+    where: { id: empresaId },
+    data: { recursosPersonalizados: recursosValidos },
+    select: CAMPOS_CONFIGURACAO,
+  });
+  return comoCamposDesativados(empresa);
 }

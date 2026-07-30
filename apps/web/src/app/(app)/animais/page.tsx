@@ -7,9 +7,13 @@ import {
   SexoAnimal,
   CategoriaAnimal,
   StatusAnimal,
+  EspecieAnimal,
   LABEL_SEXO_ANIMAL,
   LABEL_CATEGORIA_ANIMAL,
   LABEL_STATUS_ANIMAL,
+  LABEL_ESPECIE_ANIMAL,
+  CATEGORIAS_POR_ESPECIE,
+  RECURSO_OVINOS,
 } from '@pecus/shared';
 import { listarAnimais, criarAnimal, type AnimalComLote, type NovoAnimal } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
@@ -29,8 +33,9 @@ const FORM_VAZIO: NovoAnimal = {
 
 export default function AnimaisPage() {
   const router = useRouter();
-  const { podeEditar, campoAtivo } = usePermissoes();
+  const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarAnimais = podeEditar(ModuloSistema.ANIMAIS);
+  const temOvinos = temRecurso(RECURSO_OVINOS);
 
   const [animais, setAnimais] = useState<AnimalComLote[] | null>(null);
   const [lotes, setLotes] = useState<LoteComContagem[]>([]);
@@ -58,9 +63,32 @@ export default function AnimaisPage() {
     if (loteIdNaUrl) setFiltroLoteId(loteIdNaUrl);
   }, []);
 
+  /** A espécie do animal vem sempre do lote — o cadastro não escolhe, só reflete. */
+  function especieDoLote(loteId: string): EspecieAnimal {
+    return lotes.find((l) => l.id === loteId)?.especie ?? EspecieAnimal.BOVINO;
+  }
+
+  const especieForm = especieDoLote(form.loteId);
+  const categoriasDisponiveis = CATEGORIAS_POR_ESPECIE[especieForm];
+
   function abrirModal() {
-    setForm({ ...FORM_VAZIO, loteId: filtroLoteId || lotes[0]?.id || '' });
+    const loteId = filtroLoteId || lotes[0]?.id || '';
+    setForm({
+      ...FORM_VAZIO,
+      loteId,
+      categoria: CATEGORIAS_POR_ESPECIE[especieDoLote(loteId)][0],
+    });
     setModalAberto(true);
+  }
+
+  /** Trocar de lote pode trocar a espécie, então a categoria precisa ir pra uma válida. */
+  function trocarLote(loteId: string) {
+    const categorias = CATEGORIAS_POR_ESPECIE[especieDoLote(loteId)];
+    setForm((f) => ({
+      ...f,
+      loteId,
+      categoria: categorias.includes(f.categoria) ? f.categoria : categorias[0],
+    }));
   }
 
   async function salvar() {
@@ -141,6 +169,7 @@ export default function AnimaisPage() {
             <thead>
               <tr>
                 <th>Identificador</th>
+                {temOvinos && <th>Espécie</th>}
                 <th>Categoria</th>
                 <th>Sexo</th>
                 <th>Lote</th>
@@ -154,6 +183,7 @@ export default function AnimaisPage() {
                   <td data-label="Identificador">
                     <strong>{a.identificador}</strong>
                   </td>
+                  {temOvinos && <td data-label="Espécie">{LABEL_ESPECIE_ANIMAL[a.especie]}</td>}
                   <td data-label="Categoria">{LABEL_CATEGORIA_ANIMAL[a.categoria]}</td>
                   <td data-label="Sexo">{LABEL_SEXO_ANIMAL[a.sexo]}</td>
                   <td data-label="Lote">{a.lote?.identificacao ?? '—'}</td>
@@ -182,14 +212,11 @@ export default function AnimaisPage() {
               </div>
               <div className="campo">
                 <label>Lote</label>
-                <select
-                  className="input"
-                  value={form.loteId}
-                  onChange={(e) => setForm({ ...form, loteId: e.target.value })}
-                >
+                <select className="input" value={form.loteId} onChange={(e) => trocarLote(e.target.value)}>
                   {lotes.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.identificacao}
+                      {temOvinos ? ` — ${LABEL_ESPECIE_ANIMAL[l.especie]}` : ''}
                     </option>
                   ))}
                 </select>
@@ -218,7 +245,7 @@ export default function AnimaisPage() {
                   value={form.categoria}
                   onChange={(e) => setForm({ ...form, categoria: e.target.value as CategoriaAnimal })}
                 >
-                  {Object.values(CategoriaAnimal).map((c) => (
+                  {categoriasDisponiveis.map((c) => (
                     <option key={c} value={c}>
                       {LABEL_CATEGORIA_ANIMAL[c]}
                     </option>

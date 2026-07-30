@@ -1,10 +1,11 @@
-import type { SexoAnimal, CategoriaAnimal, StatusAnimal } from '../enums/animal';
+import type { SexoAnimal, CategoriaAnimal, StatusAnimal, EspecieAnimal } from '../enums/animal';
 
 export interface Animal {
   id: string;
   empresaId: string;
   loteId?: string | null;
   identificador: string;
+  especie: EspecieAnimal;
   sexo: SexoAnimal;
   categoria: CategoriaAnimal;
   dataNascimento?: string | null;

@@ -1,5 +1,12 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
-import { StatusAnimal } from '@pecus/shared';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  StatusAnimal,
+  CATEGORIAS_POR_ESPECIE,
+  LABEL_CATEGORIA_ANIMAL,
+  LABEL_ESPECIE_ANIMAL,
+  type CategoriaAnimal,
+  type EspecieAnimal,
+} from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
@@ -8,6 +15,20 @@ import type { CriarAnimalDto, AtualizarAnimalDto, DarSaidaAnimalDto } from './dt
 async function garantirLoteDaEmpresa(empresaId: string, loteId: string) {
   const lote = await prisma.lote.findFirst({ where: { id: loteId, empresaId } });
   if (!lote) throw new NotFoundException('Lote não encontrado nesta empresa.');
+  return lote;
+}
+
+/**
+ * A espécie do animal é sempre herdada do lote (nunca vem do cliente), então
+ * só resta garantir que a categoria escolhida existe naquela espécie — evita
+ * cadastrar um "Bezerro" num lote de ovinos, por exemplo.
+ */
+function garantirCategoriaDaEspecie(especie: EspecieAnimal, categoria: CategoriaAnimal) {
+  if (!CATEGORIAS_POR_ESPECIE[especie].includes(categoria)) {
+    throw new BadRequestException(
+      `A categoria "${LABEL_CATEGORIA_ANIMAL[categoria]}" não é válida para ${LABEL_ESPECIE_ANIMAL[especie]}.`,
+    );
+  }
 }
 
 async function garantirIdentificadorLivre(empresaId: string, identificador: string, ignorarId?: string) {
@@ -32,8 +53,9 @@ export async function detalhar(empresaId: string, id: string) {
 }
 
 export async function criar(empresaId: string, dtoOriginal: CriarAnimalDto) {
-  await garantirLoteDaEmpresa(empresaId, dtoOriginal.loteId);
+  const lote = await garantirLoteDaEmpresa(empresaId, dtoOriginal.loteId);
   await garantirIdentificadorLivre(empresaId, dtoOriginal.identificador);
+  garantirCategoriaDaEspecie(lote.especie as EspecieAnimal, dtoOriginal.categoria);
 
   const camposDesativados = await obterCamposDesativados(empresaId);
   const dto = removerCamposDesativados(dtoOriginal, 'animais', camposDesativados);
@@ -43,6 +65,7 @@ export async function criar(empresaId: string, dtoOriginal: CriarAnimalDto) {
       empresaId,
       loteId: dto.loteId,
       identificador: dto.identificador,
+      especie: lote.especie,
       sexo: dto.sexo,
       categoria: dto.categoria,
       dataEntrada: new Date(dto.dataEntrada),
@@ -54,13 +77,22 @@ export async function criar(empresaId: string, dtoOriginal: CriarAnimalDto) {
 }
 
 export async function atualizar(empresaId: string, id: string, dto: AtualizarAnimalDto) {
-  await detalhar(empresaId, id);
-  if (dto.loteId) await garantirLoteDaEmpresa(empresaId, dto.loteId);
+  const animal = await detalhar(empresaId, id);
   if (dto.identificador) await garantirIdentificadorLivre(empresaId, dto.identificador, id);
+
+  // Trocar de lote pode trocar a espécie do animal; a categoria tem que ser
+  // compatível com a espécie de destino.
+  const loteDestino = dto.loteId ? await garantirLoteDaEmpresa(empresaId, dto.loteId) : null;
+  const especie = (loteDestino?.especie ?? animal.especie) as EspecieAnimal;
+  garantirCategoriaDaEspecie(especie, (dto.categoria ?? animal.categoria) as CategoriaAnimal);
 
   return prisma.animal.update({
     where: { id },
-    data: { ...dto, dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined },
+    data: {
+      ...dto,
+      especie,
+      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+    },
   });
 }
 

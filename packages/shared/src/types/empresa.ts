@@ -14,4 +14,5 @@ export interface Empresa {
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;
   camposDesativados: string[];
+  recursosPersonalizados: string[];
 }

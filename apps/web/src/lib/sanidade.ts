@@ -11,6 +11,8 @@ export interface NovoEventoSanitario {
   nome: string;
   data: string;
   proximaAplicacao?: string;
+  escoreFamacha?: number;
+  escoreCorporal?: number;
   observacao?: string;
 }
 
@@ -49,4 +51,27 @@ export function proximosVencimentos(dias?: number) {
 export function historicoSanitario(limite?: number) {
   const q = limite ? `?limite=${limite}` : '';
   return api<EventoSanitarioComAnimal[]>(`/sanidade/historico${q}`);
+}
+
+/** Uma linha do alerta de vermifugação seletiva (FAMACHA) — só ovinos. */
+export interface AvaliacaoFamacha {
+  animalId: string;
+  identificador: string;
+  lote?: { id: string; identificacao: string } | null;
+  data: string;
+  escoreFamacha: number;
+  escoreCorporal?: number | null;
+  precisaVermifugar: boolean;
+  conduta: string;
+}
+
+export interface AlertaFamacha {
+  semAvaliacao: number;
+  totalAvaliados: number;
+  paraVermifugar: AvaliacaoFamacha[];
+  avaliados: AvaliacaoFamacha[];
+}
+
+export function alertaFamacha() {
+  return api<AlertaFamacha>('/sanidade/alerta-famacha');
 }

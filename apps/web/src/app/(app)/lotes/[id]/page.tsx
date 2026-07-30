@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ModuloSistema, LABEL_TIPO_METODO_MANEJO, TIPOS_METODO_A_PASTO, type MetodoManejo } from '@pecus/shared';
+import {
+  ModuloSistema,
+  LABEL_TIPO_METODO_MANEJO,
+  TIPOS_METODO_A_PASTO,
+  LABEL_ESPECIE_ANIMAL,
+  ESPECIE_CONFIG,
+  RECURSO_OVINOS,
+  type MetodoManejo,
+} from '@pecus/shared';
 import {
   obterLote,
   atualizarLote,
@@ -21,7 +29,8 @@ import { usePermissoes } from '@/contexts/PermissoesContext';
 export default function DetalheLotePage() {
   const params = useParams<{ id: string }>();
   const loteId = params.id;
-  const { podeEditar } = usePermissoes();
+  const { podeEditar, temRecurso } = usePermissoes();
+  const temOvinos = temRecurso(RECURSO_OVINOS);
   const podeRegistrarPesagem = podeEditar(ModuloSistema.PESAGENS);
   const podeEditarLote = podeEditar(ModuloSistema.LOTES);
 
@@ -162,6 +171,17 @@ export default function DetalheLotePage() {
   }
   lote.pesagens.forEach((p) => pontos.push({ label: brData(p.data), peso: p.pesoMedio }));
 
+  // Cordeiro ganha ~200-300 g/dia; em kg/dia o número fica ilegível (0,25).
+  const gmdEmGramas = ESPECIE_CONFIG[lote.especie].gmdEmGramas;
+  const formatarGmd = (kgPorDia: number) =>
+    gmdEmGramas ? `${Math.round(kgPorDia * 1000)} g/dia` : `${kgPorDia} kg/dia`;
+
+  const custoCarcacaFase = indicadores?.temMetodo
+    ? indicadores.vendePorArroba === false
+      ? indicadores.custoPorKgCarcacaFase
+      : indicadores.custoPorArrobaFase
+    : null;
+
   return (
     <div className="container">
       <Link href="/lotes" style={{ fontSize: 14, display: 'inline-block', marginBottom: 12 }}>
@@ -188,6 +208,12 @@ export default function DetalheLotePage() {
           }}
         >
           <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+            {temOvinos && (
+              <div>
+                <div style={{ fontSize: 14, color: 'var(--texto-suave)' }}>Espécie</div>
+                <strong>{LABEL_ESPECIE_ANIMAL[lote.especie]}</strong>
+              </div>
+            )}
             <div>
               <div style={{ fontSize: 14, color: 'var(--texto-suave)' }}>Método de manejo</div>
               <strong>{lote.metodoManejo?.nome ?? 'Não definido'}</strong>
@@ -234,7 +260,7 @@ export default function DetalheLotePage() {
           <div className="metrica-label">Peso de entrada</div>
         </div>
         <div className="card">
-          <div className="metrica">{gmd?.gmd != null ? `${gmd.gmd} kg/dia` : '—'}</div>
+          <div className="metrica">{gmd?.gmd != null ? formatarGmd(gmd.gmd) : '—'}</div>
           <div className="metrica-label">GMD</div>
         </div>
         <div className="card">
@@ -264,7 +290,7 @@ export default function DetalheLotePage() {
           <div className="grid-cards" style={{ marginBottom: 24 }}>
             <div className="card">
               <div className="metrica">
-                {indicadores.gmdFase != null ? `${indicadores.gmdFase} kg/dia` : '—'}
+                {indicadores.gmdFase != null ? formatarGmd(indicadores.gmdFase) : '—'}
               </div>
               <div className="metrica-label">
                 GMD da fase{indicadores.gmdEsperado != null ? ` (meta: ${indicadores.gmdEsperado})` : ''}
@@ -272,14 +298,14 @@ export default function DetalheLotePage() {
             </div>
             <div className="card">
               <div className="metrica">
-                {indicadores.custoPorArrobaFase != null
-                  ? indicadores.custoPorArrobaFase.toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    })
+                {custoCarcacaFase != null
+                  ? custoCarcacaFase.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                   : '—'}
               </div>
-              <div className="metrica-label">Custo por arroba da fase (RC {indicadores.rendimentoCarcaca}%)</div>
+              <div className="metrica-label">
+                {indicadores.vendePorArroba === false ? 'Custo por kg de carcaça' : 'Custo por arroba'} da
+                fase (RC {indicadores.rendimentoCarcaca}%)
+              </div>
             </div>
 
             {indicadores.indicadores?.lotacaoUaHa !== undefined && (

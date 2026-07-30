@@ -82,3 +82,10 @@ export class AtualizarConfiguracaoEmpresaDto {
   @IsString({ each: true })
   camposDesativados?: string[];
 }
+
+/** Tela "Recursos personalizados" (só ADMIN): recursos sob encomenda liberados pra uma fazenda. */
+export class AtualizarRecursosPersonalizadosDto {
+  @IsArray()
+  @IsString({ each: true })
+  recursos: string[];
+}

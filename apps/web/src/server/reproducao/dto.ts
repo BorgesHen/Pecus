@@ -1,5 +1,26 @@
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { TipoEventoReprodutivo, SexoAnimal } from '@pecus/shared';
+
+/** Uma cria a ser cadastrada como Animal junto do evento de PARTO. */
+export class CriaDto {
+  @IsString()
+  identificador: string;
+
+  @IsOptional()
+  @IsEnum(SexoAnimal)
+  sexo?: SexoAnimal;
+}
 
 export class CriarEventoReprodutivoDto {
   @IsString()
@@ -24,14 +45,26 @@ export class CriarEventoReprodutivoDto {
   @IsString()
   criaId?: string;
 
-  /** Alternativa a criaId: cadastra a cria na hora (tipo PARTO). */
+  /**
+   * Crias a cadastrar na hora (tipo PARTO). Aceita mais de uma porque parto
+   * múltiplo é comum em ovinos. Todas herdam espécie/lote da mãe.
+   */
   @IsOptional()
-  @IsString()
-  criaIdentificador?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CriaDto)
+  crias?: CriaDto[];
 
+  /**
+   * Nº de crias nascidas no parto. Se omitido, assume o nº de crias
+   * cadastradas (mínimo 1). Informar explicitamente serve pra quando nascem
+   * mais crias do que as identificadas com brinco.
+   */
   @IsOptional()
-  @IsEnum(SexoAnimal)
-  criaSexo?: SexoAnimal;
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  numeroCrias?: number;
 
   @IsOptional()
   @IsString()

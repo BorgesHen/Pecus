@@ -101,4 +101,11 @@ export interface ConfiguracaoEmpresa {
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;
   camposDesativados: string[];
+  /**
+   * Recursos sob encomenda liberados pra esta fazenda (só o ADMIN altera, na
+   * tela "Recursos personalizados"). Vem junto da configuração pro front poder
+   * esconder telas/campos de recursos que a fazenda não tem — ver
+   * RECURSOS_PERSONALIZADOS.
+   */
+  recursosPersonalizados: string[];
 }

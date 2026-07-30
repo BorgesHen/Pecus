@@ -14,3 +14,11 @@ export function obterConfiguracaoEmpresa() {
 export function atualizarConfiguracaoEmpresa(dados: Partial<ConfiguracaoEmpresa>) {
   return api<ConfiguracaoEmpresa>('/empresas/configuracao', { method: 'PATCH', body: dados });
 }
+
+/** Tela "Recursos personalizados" (só ADMIN): liga/desliga recursos sob encomenda pra uma fazenda específica. */
+export function atualizarRecursosPersonalizados(empresaId: string, recursos: string[]) {
+  return api<ConfiguracaoEmpresa>(`/empresas/${empresaId}/recursos-personalizados`, {
+    method: 'PATCH',
+    body: { recursos },
+  });
+}

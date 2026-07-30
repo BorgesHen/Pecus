@@ -1,5 +1,14 @@
 import { api } from './api';
-import type { Lote, Area, Gasto, Pesagem, MetodoManejo, LoteMetodoHistorico, TipoMetodoManejo } from '@pecus/shared';
+import type {
+  Lote,
+  Area,
+  Gasto,
+  Pesagem,
+  MetodoManejo,
+  LoteMetodoHistorico,
+  TipoMetodoManejo,
+  EspecieAnimal,
+} from '@pecus/shared';
 
 export interface LoteComContagem extends Lote {
   metodoManejo?: MetodoManejo | null;
@@ -16,6 +25,7 @@ export interface LoteDetalhado extends Lote {
 
 export interface NovoLote {
   identificacao: string;
+  especie?: EspecieAnimal;
   dataAquisicao: string;
   quantidadeAnimais: number;
   pesoMedioEntrada?: number;

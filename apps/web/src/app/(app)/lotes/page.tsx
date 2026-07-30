@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModuloSistema, TIPOS_METODO_A_PASTO, type MetodoManejo } from '@pecus/shared';
+import {
+  ModuloSistema,
+  TIPOS_METODO_A_PASTO,
+  EspecieAnimal,
+  LABEL_ESPECIE_ANIMAL,
+  RECURSO_OVINOS,
+  type MetodoManejo,
+} from '@pecus/shared';
 import {
   listarLotes,
   criarLote,
@@ -18,6 +25,7 @@ import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoLote = {
   identificacao: '',
+  especie: EspecieAnimal.BOVINO,
   dataAquisicao: hojeISO(),
   quantidadeAnimais: 1,
   pesoMedioEntrada: undefined,
@@ -29,8 +37,10 @@ const FORM_VAZIO: NovoLote = {
 
 export default function LotesPage() {
   const router = useRouter();
-  const { podeEditar, campoAtivo } = usePermissoes();
+  const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarLotes = podeEditar(ModuloSistema.LOTES);
+  // Fazenda que só cria gado nem vê o seletor de espécie — a tela fica igual à de antes.
+  const temOvinos = temRecurso(RECURSO_OVINOS);
   const [lotes, setLotes] = useState<LoteComContagem[] | null>(null);
   const [metodos, setMetodos] = useState<MetodoManejo[]>([]);
   const [areas, setAreas] = useState<AreaComContagem[]>([]);
@@ -120,6 +130,7 @@ export default function LotesPage() {
             <thead>
               <tr>
                 <th>Identificação</th>
+                {temOvinos && <th>Espécie</th>}
                 <th>Aquisição</th>
                 <th>Animais</th>
                 <th>Peso entrada</th>
@@ -138,6 +149,9 @@ export default function LotesPage() {
                   <td data-label="Identificação">
                     <strong>{lote.identificacao}</strong>
                   </td>
+                  {temOvinos && (
+                    <td data-label="Espécie">{LABEL_ESPECIE_ANIMAL[lote.especie]}</td>
+                  )}
                   <td data-label="Aquisição">{brData(lote.dataAquisicao)}</td>
                   <td data-label="Animais">{lote.quantidadeAnimais}</td>
                   <td data-label="Peso entrada">
@@ -174,6 +188,27 @@ export default function LotesPage() {
                 onChange={(e) => setForm({ ...form, identificacao: e.target.value })}
               />
             </div>
+
+            {temOvinos && (
+              <div className="campo">
+                <label>Espécie</label>
+                <select
+                  className="input"
+                  value={form.especie ?? EspecieAnimal.BOVINO}
+                  onChange={(e) => setForm({ ...form, especie: e.target.value as EspecieAnimal })}
+                >
+                  {Object.values(EspecieAnimal).map((especie) => (
+                    <option key={especie} value={especie}>
+                      {LABEL_ESPECIE_ANIMAL[especie]}
+                    </option>
+                  ))}
+                </select>
+                <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginTop: 6 }}>
+                  Define as categorias dos animais e como o custo é calculado (arroba pra bovino,
+                  kg de carcaça pra ovino). Não muda depois que o lote tiver animais.
+                </p>
+              </div>
+            )}
 
             <div className="linha-campos">
               <div className="campo">

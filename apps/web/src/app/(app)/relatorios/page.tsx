@@ -41,6 +41,8 @@ export default function RelatoriosPage() {
 
   const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const maiorGasto = categorias ? Math.max(1, ...categorias.map((c) => c.total)) : 1;
+  /** Indicador de custo que faz sentido pra espécie do lote (arroba pra bovino, kg de carcaça pra ovino). */
+  const custoPrincipal = custo ? (custo.vendePorArroba ? custo.custoPorArroba : custo.custoPorKgCarcaca) : null;
 
   return (
     <div className="container">
@@ -69,11 +71,16 @@ export default function RelatoriosPage() {
             </select>
           </div>
 
-          <h3 style={{ margin: '24px 0 12px' }}>Custo por arroba</h3>
-          {custo && custo.custoPorArroba != null && (
+          {/* Ovino não se comercializa em arroba, então o indicador principal muda pra kg de carcaça. */}
+          <h3 style={{ margin: '24px 0 12px' }}>
+            {custo && !custo.vendePorArroba ? 'Custo por kg de carcaça' : 'Custo por arroba'}
+          </h3>
+          {custo && custoPrincipal != null && (
             <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>
-              Considera rendimento de carcaça de {custo.rendimentoCarcaca}% (arroba = peso de
-              carcaça, não peso vivo).
+              Considera rendimento de carcaça de {custo.rendimentoCarcaca}%
+              {custo.vendePorArroba
+                ? ' (arroba = 15 kg de carcaça, não peso vivo).'
+                : ' — ovinos são comercializados por kg de carcaça, não por arroba.'}
             </p>
           )}
 
@@ -81,7 +88,7 @@ export default function RelatoriosPage() {
             <div className="erro">{erroCusto}</div>
           ) : custo?.erro ? (
             <div className="erro">{custo.erro}</div>
-          ) : custo && custo.custoPorArroba == null ? (
+          ) : custo && custoPrincipal == null ? (
             <div className="card">
               <p style={{ color: 'var(--texto-suave)' }}>
                 Ainda não é possível calcular: registre pelo menos uma pesagem (além do peso de entrada)
@@ -99,15 +106,21 @@ export default function RelatoriosPage() {
                 <div className="metrica-label">Ganho total de peso</div>
               </div>
               <div className="card">
-                <div className="metrica">{custo.ganhoArrobas.toFixed(2)} @</div>
-                <div className="metrica-label">Ganho em arrobas</div>
+                <div className="metrica">
+                  {custo.vendePorArroba
+                    ? `${custo.ganhoArrobas?.toFixed(2)} @`
+                    : `${custo.ganhoCarcacaKg.toFixed(1)} kg`}
+                </div>
+                <div className="metrica-label">
+                  {custo.vendePorArroba ? 'Ganho em arrobas' : 'Ganho em carcaça'}
+                </div>
               </div>
               <div className="card" style={{ background: 'var(--verde)', color: '#fff' }}>
                 <div className="metrica" style={{ color: '#fff' }}>
-                  {brl(custo.custoPorArroba!)}
+                  {brl(custoPrincipal!)}
                 </div>
                 <div className="metrica-label" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                  Custo por arroba
+                  {custo.vendePorArroba ? 'Custo por arroba' : 'Custo por kg de carcaça'}
                 </div>
               </div>
             </div>

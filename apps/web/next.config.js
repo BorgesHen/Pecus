@@ -30,6 +30,10 @@ const nextConfig = {
   reactStrictMode: true,
   // Permite importar o pacote compartilhado (TypeScript) direto do monorepo
   transpilePackages: ['@pecus/shared'],
+  // Rodar `next build` enquanto um `next dev` está de pé corrompe o .next
+  // compartilhado (dá "Cannot find module './xxxx.js'"). Setar NEXT_DIST_DIR
+  // permite buildar num diretório separado sem derrubar o dev que está rodando.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   async headers() {
     return [{ source: '/:path*', headers: SECURITY_HEADERS }];
   },

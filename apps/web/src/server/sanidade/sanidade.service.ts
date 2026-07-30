@@ -1,5 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { StatusAnimal } from '@pecus/shared';
+import {
+  StatusAnimal,
+  EspecieAnimal,
+  FAMACHA_GRAU_ALERTA,
+  ECC_ALERTA,
+  GRAUS_FAMACHA,
+} from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
@@ -26,6 +32,8 @@ export async function criar(empresaId: string, dtoOriginal: CriarEventoSanitario
       nome: dto.nome,
       data: new Date(dto.data),
       proximaAplicacao: dto.proximaAplicacao ? new Date(dto.proximaAplicacao) : undefined,
+      escoreFamacha: dto.escoreFamacha,
+      escoreCorporal: dto.escoreCorporal,
       observacao: dto.observacao,
     },
   });
@@ -82,4 +90,68 @@ export async function proximosVencimentos(empresaId: string, dias?: number) {
 
 export function historicoRecente(empresaId: string, limite = 20) {
   return prisma.eventoSanitario.findMany({ where: { empresaId }, include: { animal: true }, orderBy: { data: 'desc' }, take: limite });
+}
+
+/**
+ * Alerta de vermifugação seletiva (manejo ovino, método FAMACHA©).
+ *
+ * Pega a avaliação mais recente de cada ovino ativo e decide a conduta:
+ * grau 4-5 = vermifugar; grau 3 = vermifugar só se o animal estiver magro
+ * (ECC abaixo de ECC_ALERTA), que é justamente o critério que permite tratar
+ * uma fração do rebanho em vez de todo ele.
+ */
+export async function alertaFamacha(empresaId: string) {
+  const avaliacoes = await prisma.eventoSanitario.findMany({
+    where: {
+      empresaId,
+      escoreFamacha: { not: null },
+      animal: { especie: EspecieAnimal.OVINO, status: StatusAnimal.ATIVO },
+    },
+    include: { animal: { include: { lote: { select: { id: true, identificacao: true } } } } },
+    orderBy: { data: 'desc' },
+  });
+
+  // A lista vem ordenada por data desc, então o primeiro de cada animal é o mais recente.
+  const ultimaPorAnimal = new Map<string, (typeof avaliacoes)[number]>();
+  for (const avaliacao of avaliacoes) {
+    if (!ultimaPorAnimal.has(avaliacao.animalId)) ultimaPorAnimal.set(avaliacao.animalId, avaliacao);
+  }
+
+  const avaliados = [...ultimaPorAnimal.values()].map((avaliacao) => {
+    const grau = avaliacao.escoreFamacha!;
+    const ecc = avaliacao.escoreCorporal;
+    const magro = ecc != null && ecc < ECC_ALERTA;
+    const precisaVermifugar = grau > FAMACHA_GRAU_ALERTA || (grau === FAMACHA_GRAU_ALERTA && magro);
+
+    return {
+      animalId: avaliacao.animalId,
+      identificador: avaliacao.animal.identificador,
+      lote: avaliacao.animal.lote,
+      data: avaliacao.data,
+      escoreFamacha: grau,
+      escoreCorporal: ecc,
+      precisaVermifugar,
+      conduta:
+        GRAUS_FAMACHA.find((g) => g.grau === grau)?.conduta ??
+        (precisaVermifugar ? 'Vermifugar.' : 'Não vermifugar.'),
+    };
+  });
+
+  const paraVermifugar = avaliados.filter((a) => a.precisaVermifugar);
+
+  return {
+    // Quantos ovinos ativos ainda não têm nenhuma avaliação registrada.
+    semAvaliacao: await prisma.animal.count({
+      where: {
+        empresaId,
+        especie: EspecieAnimal.OVINO,
+        status: StatusAnimal.ATIVO,
+        eventosSanitarios: { none: { escoreFamacha: { not: null } } },
+      },
+    }),
+    totalAvaliados: avaliados.length,
+    paraVermifugar,
+    // Ordena do grau mais crítico pro menos, pra a tela mostrar o pior primeiro.
+    avaliados: avaliados.sort((a, b) => b.escoreFamacha - a.escoreFamacha),
+  };
 }

@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ModuloSistema, TipoEventoSanitario, LABEL_TIPO_EVENTO_SANITARIO } from '@pecus/shared';
+import {
+  ModuloSistema,
+  TipoEventoSanitario,
+  LABEL_TIPO_EVENTO_SANITARIO,
+  GRAUS_FAMACHA,
+  RECURSO_OVINOS,
+} from '@pecus/shared';
 import {
   proximosVencimentos,
   historicoSanitario,
   criarEventoSanitario,
   aplicarEmMassa,
+  alertaFamacha,
   type EventoSanitarioComAnimal,
+  type AlertaFamacha,
 } from '@/lib/sanidade';
 import { listarAnimais, type AnimalComLote } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
@@ -25,18 +33,22 @@ const FORM_VAZIO = {
   nome: '',
   data: new Date().toISOString().slice(0, 10),
   proximaAplicacao: '',
+  escoreFamacha: '' as number | '',
+  escoreCorporal: '' as number | '',
   observacao: '',
 };
 
 export default function SanidadePage() {
-  const { podeEditar, campoAtivo, configEmpresa } = usePermissoes();
+  const { podeEditar, campoAtivo, configEmpresa, temRecurso } = usePermissoes();
   const podeEditarSanidade = podeEditar(ModuloSistema.SANIDADE);
+  const temOvinos = temRecurso(RECURSO_OVINOS);
 
   const [vencimentos, setVencimentos] = useState<{
     vencidos: EventoSanitarioComAnimal[];
     proximos: EventoSanitarioComAnimal[];
   } | null>(null);
   const [historico, setHistorico] = useState<EventoSanitarioComAnimal[] | null>(null);
+  const [famacha, setFamacha] = useState<AlertaFamacha | null>(null);
   const [animais, setAnimais] = useState<AnimalComLote[]>([]);
   const [lotes, setLotes] = useState<LoteComContagem[]>([]);
   const [erro, setErro] = useState('');
@@ -48,6 +60,7 @@ export default function SanidadePage() {
   function carregar() {
     proximosVencimentos().then(setVencimentos).catch(() => setVencimentos(null));
     historicoSanitario(20).then(setHistorico).catch(() => setHistorico(null));
+    if (temOvinos) alertaFamacha().then(setFamacha).catch(() => setFamacha(null));
   }
 
   useEffect(() => {
@@ -73,7 +86,14 @@ export default function SanidadePage() {
         observacao: form.observacao || undefined,
       };
       if (form.alvo === 'animal') {
-        await criarEventoSanitario({ ...campos, animalId: form.animalId });
+        // Os escores são individuais (FAMACHA se avalia olhando o olho de cada
+        // animal), então só existem no cadastro por animal — nunca em massa.
+        await criarEventoSanitario({
+          ...campos,
+          animalId: form.animalId,
+          escoreFamacha: form.escoreFamacha === '' ? undefined : Number(form.escoreFamacha),
+          escoreCorporal: form.escoreCorporal === '' ? undefined : Number(form.escoreCorporal),
+        });
       } else {
         await aplicarEmMassa({ ...campos, loteId: form.loteId });
       }
@@ -134,6 +154,56 @@ export default function SanidadePage() {
           <div className="metrica-label">Próximos {diasAviso} dias</div>
         </div>
       </div>
+
+      {temOvinos && famacha && (famacha.totalAvaliados > 0 || famacha.semAvaliacao > 0) && (
+        <>
+          <h3 style={{ marginBottom: 4 }}>Vermifugação seletiva (FAMACHA) — ovinos</h3>
+          <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>
+            Baseado na última avaliação de cada ovino. Tratar só quem precisa economiza vermífugo e
+            evita criar parasitas resistentes.
+            {famacha.semAvaliacao > 0 && ` ${famacha.semAvaliacao} ovino(s) ainda sem avaliação.`}
+          </p>
+
+          {famacha.paraVermifugar.length === 0 ? (
+            <div className="card" style={{ marginBottom: 24 }}>
+              <p style={{ color: 'var(--texto-suave)' }}>
+                Nenhum ovino precisa de vermífugo agora ({famacha.totalAvaliados} avaliado(s)).
+              </p>
+            </div>
+          ) : (
+            <div className="tabela-wrap" style={{ marginBottom: 24 }}>
+              <table className="tabela">
+                <thead>
+                  <tr>
+                    <th>Animal</th>
+                    <th>Lote</th>
+                    <th>FAMACHA</th>
+                    <th>Condição corporal</th>
+                    <th>Avaliado em</th>
+                    <th>Conduta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {famacha.paraVermifugar.map((a) => (
+                    <tr key={a.animalId}>
+                      <td data-label="Animal">
+                        <Link href={`/animais/${a.animalId}`}>{a.identificador}</Link>
+                      </td>
+                      <td data-label="Lote">{a.lote?.identificacao ?? '—'}</td>
+                      <td data-label="FAMACHA">
+                        <strong style={{ color: 'var(--erro)' }}>{a.escoreFamacha}</strong>
+                      </td>
+                      <td data-label="Condição corporal">{a.escoreCorporal ?? '—'}</td>
+                      <td data-label="Avaliado em">{brData(a.data)}</td>
+                      <td data-label="Conduta">{a.conduta}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       {vencimentos && (vencimentos.vencidos.length > 0 || vencimentos.proximos.length > 0) && (
         <>
@@ -290,6 +360,42 @@ export default function SanidadePage() {
                 </div>
               )}
             </div>
+
+            {temOvinos && form.alvo === 'animal' && (
+              <div className="linha-campos">
+                <div className="campo">
+                  <label>Escore FAMACHA (opcional, ovinos)</label>
+                  <select
+                    className="input"
+                    value={form.escoreFamacha}
+                    onChange={(e) =>
+                      setForm({ ...form, escoreFamacha: e.target.value === '' ? '' : Number(e.target.value) })
+                    }
+                  >
+                    <option value="">Não avaliado</option>
+                    {GRAUS_FAMACHA.map((g) => (
+                      <option key={g.grau} value={g.grau}>
+                        {g.label} — {g.conduta}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo">
+                  <label>Condição corporal (1 a 5, opcional)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    max={5}
+                    step={0.5}
+                    value={form.escoreCorporal}
+                    onChange={(e) =>
+                      setForm({ ...form, escoreCorporal: e.target.value === '' ? '' : Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+            )}
 
             {campoAtivo('sanidade.observacao') && (
               <div className="campo">

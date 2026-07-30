@@ -1,7 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { ModuloSistema, NivelAcesso, campoAtivo as campoAtivoRegistro, type ConfiguracaoEmpresa } from '@pecus/shared';
+import {
+  ModuloSistema,
+  NivelAcesso,
+  campoAtivo as campoAtivoRegistro,
+  recursoPersonalizadoAtivo,
+  type ConfiguracaoEmpresa,
+} from '@pecus/shared';
 import { obterMinhasPermissoes, type MinhasPermissoes } from '@/lib/permissoes';
 import { obterConfiguracaoEmpresa } from '@/lib/empresas';
 
@@ -11,6 +17,8 @@ interface PermissoesContextValor {
   podeAcessar: (modulo: ModuloSistema) => boolean;
   podeEditar: (modulo: ModuloSistema) => boolean;
   campoAtivo: (chave: string) => boolean;
+  /** Recurso sob encomenda liberado pra esta fazenda (ex: RECURSO_OVINOS). */
+  temRecurso: (chave: string) => boolean;
   /** Atualiza a configuração da empresa em todo o app (menu, forms) sem precisar recarregar a página. */
   definirConfigEmpresa: (config: ConfiguracaoEmpresa) => void;
 }
@@ -48,6 +56,7 @@ export function PermissoesProvider({ children }: { children: React.ReactNode }) 
     podeAcessar: (modulo) => nivel(modulo) !== NivelAcesso.NENHUM,
     podeEditar: (modulo) => nivel(modulo) === NivelAcesso.EDITAR,
     campoAtivo: (chave) => campoAtivoRegistro(configEmpresa?.camposDesativados, chave),
+    temRecurso: (chave) => recursoPersonalizadoAtivo(configEmpresa?.recursosPersonalizados, chave),
     definirConfigEmpresa: setConfigEmpresa,
   };
 

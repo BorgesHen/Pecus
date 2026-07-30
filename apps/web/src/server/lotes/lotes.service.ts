@@ -1,12 +1,25 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { EspecieAnimal, RECURSO_OVINOS } from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
+import { garantirRecurso } from '../recursos';
 import type { CriarLoteDto, AtualizarLoteDto, TrocarMetodoLoteDto } from './dto';
 
 async function garantirAreaDaEmpresa(empresaId: string, areaId: string) {
   const area = await prisma.area.findFirst({ where: { id: areaId, empresaId } });
   if (!area) throw new NotFoundException('Área não encontrada nesta empresa.');
+}
+
+/** Espécies fora de BOVINO dependem de recurso liberado pra fazenda. */
+async function garantirEspecieLiberada(empresaId: string, especie?: EspecieAnimal) {
+  if (especie === EspecieAnimal.OVINO) {
+    await garantirRecurso(
+      empresaId,
+      RECURSO_OVINOS,
+      'O recurso de ovinos não está liberado para esta fazenda.',
+    );
+  }
 }
 
 export function listar(empresaId: string) {
@@ -36,12 +49,14 @@ export async function criar(empresaId: string, dtoOriginal: CriarLoteDto) {
   const camposDesativados = await obterCamposDesativados(empresaId);
   const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
   if (dto.areaId) await garantirAreaDaEmpresa(empresaId, dto.areaId);
+  await garantirEspecieLiberada(empresaId, dto.especie);
   const dataAquisicao = new Date(dto.dataAquisicao);
   return prisma.$transaction(async (tx) => {
     const lote = await tx.lote.create({
       data: {
         empresaId,
         identificacao: dto.identificacao,
+        especie: dto.especie ?? EspecieAnimal.BOVINO,
         dataAquisicao,
         quantidadeAnimais: dto.quantidadeAnimais,
         pesoMedioEntrada: dto.pesoMedioEntrada,
@@ -63,10 +78,24 @@ export async function criar(empresaId: string, dtoOriginal: CriarLoteDto) {
 }
 
 export async function atualizar(empresaId: string, id: string, dtoOriginal: AtualizarLoteDto) {
-  await detalhar(empresaId, id);
+  const lote = await detalhar(empresaId, id);
   const camposDesativados = await obterCamposDesativados(empresaId);
   const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
   if (dto.areaId) await garantirAreaDaEmpresa(empresaId, dto.areaId);
+
+  // Trocar a espécie depois de cadastrar animais deixaria as categorias deles
+  // inválidas (ex: "Bezerro" num lote que virou ovino), então só permite
+  // corrigir enquanto o lote está vazio.
+  if (dto.especie && dto.especie !== lote.especie) {
+    await garantirEspecieLiberada(empresaId, dto.especie);
+    const animais = await prisma.animal.count({ where: { loteId: id } });
+    if (animais > 0) {
+      throw new BadRequestException(
+        'Não é possível trocar a espécie de um lote que já tem animais cadastrados. Remova os animais primeiro ou crie outro lote.',
+      );
+    }
+  }
+
   return prisma.lote.update({
     where: { id },
     data: { ...dto, dataAquisicao: dto.dataAquisicao ? new Date(dto.dataAquisicao) : undefined },

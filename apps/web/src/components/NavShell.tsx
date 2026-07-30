@@ -62,6 +62,7 @@ const ITENS: ItemNav[] = [
     papeis: [PapelUsuario.ADMIN, PapelUsuario.RESPONSAVEL],
   },
   { href: '/convites', label: 'Convites', papeis: [PapelUsuario.ADMIN] },
+  { href: '/recursos-personalizados', label: 'Recursos personalizados', papeis: [PapelUsuario.ADMIN] },
 ];
 
 export function NavShell({

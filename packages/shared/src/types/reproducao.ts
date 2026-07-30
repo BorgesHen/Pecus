@@ -8,6 +8,11 @@ export interface EventoReprodutivo {
   data: string;
   resultado?: string | null;
   criaId?: string | null;
+  /**
+   * Nº de crias nascidas no parto — base do cálculo de prolificidade. Ovinos
+   * pare gêmeos/trigêmeos com frequência; bovino é quase sempre cria única.
+   */
+  numeroCrias?: number | null;
   observacao?: string | null;
   createdAt: string;
 }

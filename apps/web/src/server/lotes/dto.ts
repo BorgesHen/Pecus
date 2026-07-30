@@ -1,8 +1,14 @@
-import { IsInt, IsOptional, IsString, IsDateString, IsNumber, Min, Max } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsDateString, IsNumber, IsEnum, Min, Max } from 'class-validator';
+import { EspecieAnimal } from '@pecus/shared';
 
 export class CriarLoteDto {
   @IsString()
   identificacao: string;
+
+  /** Ausente = BOVINO (comportamento histórico de quem só cria gado). */
+  @IsOptional()
+  @IsEnum(EspecieAnimal)
+  especie?: EspecieAnimal;
 
   @IsDateString()
   dataAquisicao: string;
@@ -40,6 +46,11 @@ export class AtualizarLoteDto {
   @IsOptional()
   @IsString()
   identificacao?: string;
+
+  /** Só aceito enquanto o lote não tem animais — ver lotes.service.ts. */
+  @IsOptional()
+  @IsEnum(EspecieAnimal)
+  especie?: EspecieAnimal;
 
   @IsOptional()
   @IsDateString()

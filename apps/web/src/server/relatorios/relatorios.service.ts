@@ -1,9 +1,25 @@
-import { CategoriaGasto, TipoMetodoManejo } from '@pecus/shared';
+import { CategoriaGasto, TipoMetodoManejo, EspecieAnimal, ESPECIE_CONFIG } from '@pecus/shared';
 import { prisma } from '../prisma';
 
-const RC_PADRAO = 52;
-const KG_POR_UA = 450;
+const KG_POR_ARROBA = 15;
 const CATEGORIAS_ALIMENTACAO = [CategoriaGasto.RACAO, CategoriaGasto.SUPLEMENTO];
+
+/**
+ * Rendimento de carcaça a usar nos cálculos do lote.
+ *
+ * O valor configurado na fazenda (`rendimentoCarcacaPadrao`) é rotulado como
+ * padrão de bovino na tela de Configurações, então só se aplica a bovinos;
+ * pra outras espécies caímos no padrão da própria espécie (ovino ~45%).
+ */
+function rendimentoCarcacaDoLote(
+  rendimentoDoLote: number | null,
+  especie: EspecieAnimal,
+  rendimentoPadraoEmpresa?: number | null,
+): number {
+  if (rendimentoDoLote != null) return rendimentoDoLote;
+  if (especie === EspecieAnimal.BOVINO && rendimentoPadraoEmpresa != null) return rendimentoPadraoEmpresa;
+  return ESPECIE_CONFIG[especie].rendimentoCarcacaPadrao;
+}
 
 export async function dashboard(empresaId: string) {
   const [lotes, totalGasto, gastosPorCategoria] = await Promise.all([
@@ -46,16 +62,27 @@ export async function custoPorArroba(empresaId: string, loteId: string) {
   const pesoAtual = lote.pesagens[lote.pesagens.length - 1]?.pesoMedio ?? pesoEntrada;
   const ganhoKgPorAnimal = pesoAtual - pesoEntrada;
   const ganhoTotalKg = ganhoKgPorAnimal * lote.quantidadeAnimais;
-  const rendimentoCarcaca = lote.rendimentoCarcaca ?? empresa?.rendimentoCarcacaPadrao ?? RC_PADRAO;
-  const ganhoArrobas = (ganhoTotalKg * (rendimentoCarcaca / 100)) / 15;
+  const especie = lote.especie as EspecieAnimal;
+  const rendimentoCarcaca = rendimentoCarcacaDoLote(lote.rendimentoCarcaca, especie, empresa?.rendimentoCarcacaPadrao);
+  const ganhoCarcacaKg = ganhoTotalKg * (rendimentoCarcaca / 100);
+
+  // Arroba (@ = 15 kg de carcaça) é a unidade de comercialização do boi. Ovino
+  // se vende por kg de carcaça, então nem calculamos arroba — seria um número
+  // sem significado comercial pro produtor.
+  const { vendePorArroba } = ESPECIE_CONFIG[especie];
+  const ganhoArrobas = vendePorArroba ? ganhoCarcacaKg / KG_POR_ARROBA : null;
 
   return {
+    especie,
+    vendePorArroba,
     custoTotal,
     ganhoKgPorAnimal,
     ganhoTotalKg,
     rendimentoCarcaca,
-    ganhoArrobas: Number(ganhoArrobas.toFixed(2)),
-    custoPorArroba: ganhoArrobas > 0 ? Number((custoTotal / ganhoArrobas).toFixed(2)) : null,
+    ganhoCarcacaKg: Number(ganhoCarcacaKg.toFixed(2)),
+    custoPorKgCarcaca: ganhoCarcacaKg > 0 ? Number((custoTotal / ganhoCarcacaKg).toFixed(2)) : null,
+    ganhoArrobas: ganhoArrobas != null ? Number(ganhoArrobas.toFixed(2)) : null,
+    custoPorArroba: ganhoArrobas && ganhoArrobas > 0 ? Number((custoTotal / ganhoArrobas).toFixed(2)) : null,
   };
 }
 
@@ -98,9 +125,15 @@ export async function indicadoresMetodo(empresaId: string, loteId: string) {
   const gastosDaFase = lote.gastos.filter((g) => g.data >= faseInicio);
   const custoTotalFase = gastosDaFase.reduce((acc, g) => acc + Number(g.valor), 0);
 
-  const rendimentoCarcaca = lote.rendimentoCarcaca ?? empresa?.rendimentoCarcacaPadrao ?? RC_PADRAO;
-  const arrobasProduzidasFase = (ganhoTotalKgFase * (rendimentoCarcaca / 100)) / 15;
-  const custoPorArrobaFase = arrobasProduzidasFase > 0 ? Number((custoTotalFase / arrobasProduzidasFase).toFixed(2)) : null;
+  const especie = lote.especie as EspecieAnimal;
+  const rendimentoCarcaca = rendimentoCarcacaDoLote(lote.rendimentoCarcaca, especie, empresa?.rendimentoCarcacaPadrao);
+  const configEspecie = ESPECIE_CONFIG[especie];
+  const carcacaProduzidaKgFase = ganhoTotalKgFase * (rendimentoCarcaca / 100);
+  const arrobasProduzidasFase = configEspecie.vendePorArroba ? carcacaProduzidaKgFase / KG_POR_ARROBA : null;
+  const custoPorArrobaFase =
+    arrobasProduzidasFase && arrobasProduzidasFase > 0
+      ? Number((custoTotalFase / arrobasProduzidasFase).toFixed(2))
+      : null;
 
   const gastosAlimentacao = gastosDaFase.filter((g) => CATEGORIAS_ALIMENTACAO.includes(g.categoria as CategoriaGasto));
   const custoAlimentacaoFase = gastosAlimentacao.reduce((acc, g) => acc + Number(g.valor), 0);
@@ -115,7 +148,11 @@ export async function indicadoresMetodo(empresaId: string, loteId: string) {
     metodoManejo.tipo === TipoMetodoManejo.TIP
   ) {
     if (lote.area?.areaHectares) {
-      indicadores.lotacaoUaHa = Number(((pesoAtual * lote.quantidadeAnimais) / KG_POR_UA / lote.area.areaHectares).toFixed(2));
+      // UA bovina = 450 kg; ovina = 45 kg. Sem isso, um lote de ovelhas
+      // apareceria com taxa de lotação 10x menor do que realmente é.
+      indicadores.lotacaoUaHa = Number(
+        ((pesoAtual * lote.quantidadeAnimais) / configEspecie.kgPorUnidadeAnimal / lote.area.areaHectares).toFixed(2),
+      );
       indicadores.ganhoPorHectare = Number((ganhoTotalKgFase / lote.area.areaHectares).toFixed(2));
     } else {
       indicadores.lotacaoUaHa = null;
@@ -138,6 +175,10 @@ export async function indicadoresMetodo(empresaId: string, loteId: string) {
 
   return {
     temMetodo: true as const,
+    especie,
+    vendePorArroba: configEspecie.vendePorArroba,
+    /** Cordeiro ganha peso na casa das centenas de gramas — a tela exibe em g/dia. */
+    gmdEmGramas: configEspecie.gmdEmGramas,
     tipoMetodo: metodoManejo.tipo,
     metodoNome: metodoManejo.nome,
     faseAtual: !!faseAtual && faseAtual.dataFim === null,
@@ -148,7 +189,10 @@ export async function indicadoresMetodo(empresaId: string, loteId: string) {
     rendimentoCarcaca,
     ganhoTotalKgFase,
     custoTotalFase,
-    arrobasProduzidasFase: Number(arrobasProduzidasFase.toFixed(2)),
+    carcacaProduzidaKgFase: Number(carcacaProduzidaKgFase.toFixed(2)),
+    custoPorKgCarcacaFase:
+      carcacaProduzidaKgFase > 0 ? Number((custoTotalFase / carcacaProduzidaKgFase).toFixed(2)) : null,
+    arrobasProduzidasFase: arrobasProduzidasFase != null ? Number(arrobasProduzidasFase.toFixed(2)) : null,
     custoPorArrobaFase,
     indicadores,
   };

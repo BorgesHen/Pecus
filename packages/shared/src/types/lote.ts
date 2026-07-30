@@ -1,4 +1,5 @@
 import type { TipoMetodoManejo } from '../enums/metodo-manejo';
+import type { EspecieAnimal } from '../enums/animal';
 
 export interface MetodoManejo {
   id: string;
@@ -13,10 +14,12 @@ export interface Lote {
   metodoManejoId?: string | null;
   areaId?: string | null;
   identificacao: string; // ex: "Lote 01/2026"
+  especie: EspecieAnimal;
   dataAquisicao: string;
   quantidadeAnimais: number;
   pesoMedioEntrada?: number | null; // kg
-  rendimentoCarcaca?: number | null; // % — se nulo, cálculos assumem 52
+  /** % — se nulo, usa o rendimento padrão da espécie (ver ESPECIE_CONFIG). */
+  rendimentoCarcaca?: number | null;
   gmdEsperado?: number | null; // kg/dia, meta de referência
   createdAt: string;
 }

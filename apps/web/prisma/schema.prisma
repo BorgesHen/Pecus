@@ -30,7 +30,15 @@ enum SexoAnimal {
   FEMEA
 }
 
+/// Espécie do lote/animal. BOVINO é o padrão histórico; OVINO é liberado por
+/// fazenda via recurso personalizado "ovinos".
+enum EspecieAnimal {
+  BOVINO
+  OVINO
+}
+
 enum CategoriaAnimal {
+  // Bovinos
   BEZERRO
   NOVILHA
   NOVILHO
@@ -38,6 +46,14 @@ enum CategoriaAnimal {
   MATRIZ
   TOURO
   BOI
+  // Ovinos
+  CORDEIRO
+  BORREGO
+  MARRA
+  OVELHA
+  CARNEIRO
+  CAPAO
+  // Comum
   OUTRO
 }
 
@@ -52,6 +68,8 @@ enum TipoEventoSanitario {
   VACINA
   MEDICAMENTO
   EXAME
+  /// Avaliação de escores (FAMACHA / condição corporal) — manejo ovino.
+  AVALIACAO
   OUTRO
 }
 
@@ -119,6 +137,12 @@ model Empresa {
   // "tela.campo" (ex: "lotes.rendimentoCarcaca"). Ver packages/shared
   // TELAS_CAMPOS_CONFIGURAVEIS pra lista de chaves válidas.
   camposDesativados Json @default("[]")
+
+  // Recursos sob encomenda liberados só pra essa fazenda — controlado
+  // exclusivamente pelo ADMIN (tela "Recursos personalizados"), diferente
+  // dos módulos padrão acima. Array de chaves de packages/shared
+  // RECURSOS_PERSONALIZADOS.
+  recursosPersonalizados Json @default("[]")
 
   usuarios      UsuarioEmpresa[]
   lotes         Lote[]
@@ -210,10 +234,12 @@ model Lote {
   metodoManejoId    String?
   areaId            String?
   identificacao     String
+  /// Define categorias válidas dos animais e os cálculos de carcaça/GMD do lote.
+  especie           EspecieAnimal @default(BOVINO)
   dataAquisicao     DateTime
   quantidadeAnimais Int
   pesoMedioEntrada  Float?   // kg
-  /// % que vira carcaça (ex: 52). Se nulo, relatorios.service.ts usa 52 como padrão.
+  /// % que vira carcaça. Se nulo, usa o padrão da espécie (bovino 52, ovino 45).
   rendimentoCarcaca Float?
   gmdEsperado       Float?   // kg/dia — meta de referência p/ comparar com o GMD real
   createdAt         DateTime @default(now())
@@ -287,6 +313,8 @@ model Animal {
   loteId         String?
   /// Brinco/identificador — único dentro da empresa.
   identificador  String
+  /// Herdada do lote quando o animal é cadastrado dentro de um.
+  especie        EspecieAnimal   @default(BOVINO)
   sexo           SexoAnimal
   categoria      CategoriaAnimal
   dataNascimento DateTime?
@@ -315,6 +343,11 @@ model EventoSanitario {
   nome             String
   data             DateTime
   proximaAplicacao DateTime?
+  /// Grau FAMACHA 1-5 (cor da mucosa ocular) — manejo ovino, base do
+  /// tratamento seletivo contra verminose.
+  escoreFamacha    Int?
+  /// Escore de condição corporal 1-5 (aceita meio ponto).
+  escoreCorporal   Float?
   observacao       String?
   createdAt        DateTime            @default(now())
 
@@ -331,7 +364,11 @@ model EventoReprodutivo {
   tipo       TipoEventoReprodutivo
   data       DateTime
   resultado  String?
+  /// Primeira cria do parto. Em parto múltiplo (comum em ovinos) as demais
+  /// crias são cadastradas como Animal e contabilizadas em numeroCrias.
   criaId     String?
+  /// Nº de crias nascidas — base da prolificidade (crias por parto).
+  numeroCrias Int?
   observacao String?
   createdAt  DateTime              @default(now())
 

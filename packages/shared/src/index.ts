@@ -18,3 +18,4 @@ export * from './types/piquete';
 export * from './types/area';
 export * from './types/financeiro';
 export * from './config/campos-configuraveis';
+export * from './config/recursos-personalizados';
