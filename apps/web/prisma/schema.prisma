@@ -136,6 +136,31 @@ model Empresa {
   lancamentos       Lancamento[]
 }
 
+/// Convite de acesso: uma fazenda nova só consegue se cadastrar (/auth/registrar)
+/// informando um código de convite válido e ainda não usado. Gerado pelo ADMIN
+/// depois de fechar o negócio com o cliente — controla quem pode criar conta.
+model ConviteCadastro {
+  id         String    @id @default(uuid())
+  codigo     String    @unique
+  observacao String?
+  usadoEm    DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+/// Registro de tentativas de login (sucesso e falha) — usado só pra rate
+/// limiting contra força bruta. Guarda o texto digitado em "usuario", que
+/// pode nem corresponder a uma conta real; sem relação com o model Usuario.
+model TentativaLogin {
+  id        String   @id @default(uuid())
+  usuario   String
+  ip        String
+  sucesso   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([usuario, createdAt])
+  @@index([ip, createdAt])
+}
+
 model Usuario {
   id        String   @id @default(uuid())
   nome      String

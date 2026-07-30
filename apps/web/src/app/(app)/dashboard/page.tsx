@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { PrevisaoTempo } from '@/components/PrevisaoTempo';
 
 interface Dashboard {
   totalLotes: number;
@@ -74,6 +75,10 @@ export default function DashboardPage() {
                 <Link href="/sanidade">Próximos 7 dias (sanidade)</Link>
               </div>
             </div>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <PrevisaoTempo />
           </div>
 
           <h3 style={{ margin: '28px 0 12px' }}>Gastos por categoria</h3>

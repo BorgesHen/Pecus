@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AoAparecer } from '@/components/AoAparecer';
+import { GaleriaFuncionando } from '@/components/GaleriaFuncionando';
 
 export const metadata: Metadata = {
   title: 'Pecus — Gestão completa para sua fazenda de gado',
@@ -52,6 +53,15 @@ const RECURSOS = [
   },
 ];
 
+const CAPTURAS = [
+  { arquivo: 'dashboard', legenda: 'Visão geral: lotes, animais, gastos e alertas de sanidade num só painel.' },
+  { arquivo: 'lote-detalhe', legenda: 'Evolução de peso e GMD de cada lote, calculado automaticamente.' },
+  { arquivo: 'area-detalhe', legenda: 'Piquetes com altura do capim e rotação de gado por área.' },
+  { arquivo: 'sanidade', legenda: 'Vencimentos de vacina e histórico sanitário por animal.' },
+  { arquivo: 'financeiro', legenda: 'Contas a pagar e receber, com parcelamento automático.' },
+  { arquivo: 'relatorios', legenda: 'Custo por arroba calculado direto dos seus lançamentos.' },
+];
+
 const PASSOS = [
   {
     titulo: 'Cadastre sua fazenda',
@@ -95,9 +105,9 @@ export default function LandingPage() {
             lugar — pra você controlar o ganho de peso e o resultado da fazenda sem depender de planilha.
           </p>
           <div className="landing-hero-ctas">
-            <Link href="/cadastro" className="btn">
-              Comece agora
-            </Link>
+            <a href="#contato" className="btn">
+              Fale com a gente
+            </a>
             <Link href="/login" className="btn-secundario btn-secundario--claro">
               Já tenho conta
             </Link>
@@ -142,22 +152,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <AoAparecer className="landing-cta-banner">
-        <h2>Pronto pra organizar a gestão da sua fazenda?</h2>
-        <p>Cadastro rápido, sem cartão de crédito.</p>
-        <Link href="/cadastro" className="btn">
-          Comece agora
-        </Link>
-      </AoAparecer>
-
-      <section id="contato" className="landing-secao container">
+      <section className="landing-secao container">
         <AoAparecer className="landing-secao-titulo">
-          <span className="landing-eyebrow">Contato</span>
-          <h2>Fale com a gente</h2>
+          <span className="landing-eyebrow">Veja funcionando</span>
+          <h2>O Pecus na prática</h2>
+          <p>Direto do sistema real — assim é a tela que você vai usar todo dia. Clique numa imagem pra ampliar.</p>
+        </AoAparecer>
+        <GaleriaFuncionando capturas={CAPTURAS} />
+      </section>
+
+      <section id="contato" className="landing-cta-banner">
+        <AoAparecer>
+          <h2>Pronto pra organizar a gestão da sua fazenda?</h2>
           <p>Dúvidas, sugestões ou quer conhecer melhor o Pecus? É só chamar.</p>
         </AoAparecer>
         <div className="landing-contato-grade">
-          <AoAparecer>
+          <AoAparecer atraso={100}>
             <div className="card landing-contato-card">
               <h3>WhatsApp</h3>
               <a
@@ -170,7 +180,7 @@ export default function LandingPage() {
               </a>
             </div>
           </AoAparecer>
-          <AoAparecer atraso={100}>
+          <AoAparecer atraso={200}>
             <div className="card landing-contato-card">
               <h3>E-mail</h3>
               <a href="mailto:borgesh989@gmail.com" className="btn-secundario">

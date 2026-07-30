@@ -4,11 +4,14 @@ import { PapelUsuario, type UsuarioAutenticado } from '@pecus/shared';
 import { prisma } from '../prisma';
 import { assinarToken } from '../auth';
 import { PLANO_CONTAS_PADRAO } from '../financeiro/plano-contas-padrao';
+import * as convitesService from '../convites/convites.service';
+import { checarBloqueioLogin, registrarTentativaLogin } from '../rate-limit';
 import type { LoginDto, RegistrarDto } from './dto';
 
 /**
- * Registro público: cria o usuário como RESPONSAVEL e já cria a fazenda dele,
- * vinculando os dois. É assim que uma nova fazenda entra no sistema.
+ * Registro público: exige um código de convite válido e ainda não usado
+ * (gerado pelo ADMIN depois de fechar o negócio com o cliente), e então cria
+ * o usuário como RESPONSAVEL e já cria a fazenda dele, vinculando os dois.
  */
 export async function registrar(dto: RegistrarDto) {
   const [usuariosConflitantes, empresaConflitante] = await Promise.all([
@@ -37,6 +40,8 @@ export async function registrar(dto: RegistrarDto) {
   const senhaHash = await bcrypt.hash(dto.senha, 10);
 
   const resultado = await prisma.$transaction(async (tx) => {
+    await convitesService.reivindicar(tx, dto.codigoConvite);
+
     const usuario = await tx.usuario.create({
       data: {
         nome: dto.nome,
@@ -78,13 +83,17 @@ export async function registrar(dto: RegistrarDto) {
   return gerarToken(resultado.usuario, resultado.empresa.id);
 }
 
-export async function login(dto: LoginDto) {
+export async function login(dto: LoginDto, ip: string) {
+  await checarBloqueioLogin(dto.usuario, ip);
+
   const usuario = await prisma.usuario.findUnique({
     where: { usuario: dto.usuario },
     include: { empresas: true },
   });
+  const senhaOk = usuario ? await bcrypt.compare(dto.senha, usuario.senhaHash) : false;
+  await registrarTentativaLogin(dto.usuario, ip, senhaOk);
 
-  if (!usuario || !(await bcrypt.compare(dto.senha, usuario.senhaHash))) {
+  if (!usuario || !senhaOk) {
     throw new UnauthorizedException('Credenciais inválidas.');
   }
 

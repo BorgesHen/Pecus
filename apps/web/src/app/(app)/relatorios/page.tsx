@@ -11,6 +11,7 @@ export default function RelatoriosPage() {
   const [custo, setCusto] = useState<CustoArroba | null>(null);
   const [categorias, setCategorias] = useState<GastoPorCategoria[] | null>(null);
   const [erro, setErro] = useState('');
+  const [erroCusto, setErroCusto] = useState('');
 
   useEffect(() => {
     listarLotes()
@@ -25,9 +26,16 @@ export default function RelatoriosPage() {
     if (!loteId) {
       setCusto(null);
       setCategorias(null);
+      setErroCusto('');
       return;
     }
-    custoPorArroba(loteId).then(setCusto).catch(() => setCusto(null));
+    setErroCusto('');
+    custoPorArroba(loteId)
+      .then(setCusto)
+      .catch((e) => {
+        setCusto(null);
+        setErroCusto(e instanceof Error ? e.message : 'Erro ao carregar custo por arroba');
+      });
     gastosPorCategoria(loteId).then(setCategorias).catch(() => setCategorias(null));
   }, [loteId]);
 
@@ -69,7 +77,11 @@ export default function RelatoriosPage() {
             </p>
           )}
 
-          {custo && custo.custoPorArroba == null ? (
+          {erroCusto ? (
+            <div className="erro">{erroCusto}</div>
+          ) : custo?.erro ? (
+            <div className="erro">{custo.erro}</div>
+          ) : custo && custo.custoPorArroba == null ? (
             <div className="card">
               <p style={{ color: 'var(--texto-suave)' }}>
                 Ainda não é possível calcular: registre pelo menos uma pesagem (além do peso de entrada)

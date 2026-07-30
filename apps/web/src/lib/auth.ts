@@ -17,6 +17,7 @@ export async function login(usuario: string, senha: string) {
 }
 
 export async function registrar(dados: {
+  codigoConvite: string;
   nome: string;
   usuario: string;
   email: string;

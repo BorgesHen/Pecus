@@ -630,6 +630,48 @@ a {
   background: #fff;
 }
 
+.previsao-tempo-grade {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+.previsao-tempo-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 4px;
+  border-radius: var(--raio);
+  background: var(--bg);
+  text-align: center;
+}
+.previsao-tempo-dia-semana {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--texto-suave);
+}
+.previsao-tempo-dia-data {
+  font-size: 11px;
+  color: var(--texto-suave);
+}
+.previsao-tempo-icone {
+  font-size: 26px;
+  margin: 4px 0;
+}
+.previsao-tempo-temps {
+  font-size: 13px;
+}
+.previsao-tempo-chuva {
+  font-size: 11px;
+  color: var(--texto-suave);
+}
+@media (max-width: 720px) {
+  .previsao-tempo-grade {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+}
+
 /* ---------- Landing page ---------- */
 
 .landing-header {
@@ -862,6 +904,76 @@ html:not(.js) .ao-aparecer {
 .landing-recurso-card p {
   color: var(--texto-suave);
   font-size: 14px;
+}
+
+.landing-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 24px;
+}
+.landing-galeria-item {
+  margin: 0;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  overflow: hidden;
+  background: var(--card);
+  cursor: zoom-in;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.landing-galeria-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+.landing-galeria-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-bottom: 1px solid var(--borda);
+}
+.landing-galeria-item figcaption {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--texto-suave);
+}
+
+.landing-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  cursor: zoom-out;
+}
+.landing-lightbox img {
+  max-width: 100%;
+  max-height: 78vh;
+  border-radius: var(--raio);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.landing-lightbox p {
+  color: #fff;
+  margin-top: 16px;
+  font-size: 14px;
+  text-align: center;
+  max-width: 640px;
+  cursor: default;
+}
+.landing-lightbox-fechar {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 36px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 8px;
 }
 
 .landing-passos {

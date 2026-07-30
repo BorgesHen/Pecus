@@ -1,16 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { registrar } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { PopupErro } from '@/components/PopupErro';
 import { CampoSenha } from '@/components/CampoSenha';
 
-export default function CadastroPage() {
+function CadastroForm() {
   const router = useRouter();
-  const [form, setForm] = useState({ nome: '', usuario: '', email: '', senha: '', nomeEmpresa: '' });
+  const searchParams = useSearchParams();
+  const [form, setForm] = useState({
+    codigoConvite: searchParams.get('convite') ?? '',
+    nome: '',
+    usuario: '',
+    email: '',
+    senha: '',
+    nomeEmpresa: '',
+  });
   const [erro, setErro] = useState('');
   const [erroDuplicidade, setErroDuplicidade] = useState('');
   const [carregando, setCarregando] = useState(false);
@@ -48,6 +56,15 @@ export default function CadastroPage() {
         {erro && <div className="erro">{erro}</div>}
 
         <div className="campo">
+          <label>Código de convite</label>
+          <input
+            className="input"
+            value={form.codigoConvite}
+            onChange={(e) => set('codigoConvite', e.target.value.toUpperCase())}
+            placeholder="Recebido depois de fechar com a Pecus"
+          />
+        </div>
+        <div className="campo">
           <label>Seu nome</label>
           <input className="input" value={form.nome} onChange={(e) => set('nome', e.target.value)} />
         </div>
@@ -82,7 +99,7 @@ export default function CadastroPage() {
           className="btn"
           style={{ width: '100%' }}
           onClick={cadastrar}
-          disabled={carregando}
+          disabled={carregando || !form.codigoConvite}
         >
           {carregando ? 'Cadastrando...' : 'Criar conta e fazenda'}
         </button>
@@ -96,5 +113,13 @@ export default function CadastroPage() {
         <PopupErro mensagem={erroDuplicidade} onFechar={() => setErroDuplicidade('')} />
       )}
     </div>
+  );
+}
+
+export default function CadastroPage() {
+  return (
+    <Suspense fallback={null}>
+      <CadastroForm />
+    </Suspense>
   );
 }

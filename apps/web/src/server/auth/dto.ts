@@ -18,6 +18,9 @@ export class TrocarEmpresaDto {
 /** Cadastro inicial: cria o usuário RESPONSAVEL + a empresa/fazenda dele. */
 export class RegistrarDto {
   @IsString()
+  codigoConvite: string;
+
+  @IsString()
   nome: string;
 
   @IsString()
