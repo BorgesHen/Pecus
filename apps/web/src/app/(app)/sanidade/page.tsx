@@ -56,6 +56,7 @@ export default function SanidadePage() {
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const diasAviso = configEmpresa?.sanidadeDiasAvisoVencimento ?? 7;
+  const avisoAtivo = configEmpresa?.avisoVencimentoSanitarioAtivo ?? true;
 
   function carregar() {
     proximosVencimentos().then(setVencimentos).catch(() => setVencimentos(null));
@@ -123,37 +124,43 @@ export default function SanidadePage() {
 
       {erro && <div className="erro">{erro}</div>}
 
-      <div className="grid-cards" style={{ marginBottom: 24 }}>
-        <div
-          className="card"
-          style={
-            vencimentos && vencimentos.vencidos.length > 0
-              ? { background: 'var(--erro)', color: '#fff' }
-              : undefined
-          }
-        >
+      {avisoAtivo ? (
+        <div className="grid-cards" style={{ marginBottom: 24 }}>
           <div
-            className="metrica"
-            style={vencimentos && vencimentos.vencidos.length > 0 ? { color: '#fff' } : undefined}
-          >
-            {vencimentos?.vencidos.length ?? '—'}
-          </div>
-          <div
-            className="metrica-label"
+            className="card"
             style={
               vencimentos && vencimentos.vencidos.length > 0
-                ? { color: 'rgba(255,255,255,0.85)' }
+                ? { background: 'var(--erro)', color: '#fff' }
                 : undefined
             }
           >
-            Vencidos
+            <div
+              className="metrica"
+              style={vencimentos && vencimentos.vencidos.length > 0 ? { color: '#fff' } : undefined}
+            >
+              {vencimentos?.vencidos.length ?? '—'}
+            </div>
+            <div
+              className="metrica-label"
+              style={
+                vencimentos && vencimentos.vencidos.length > 0
+                  ? { color: 'rgba(255,255,255,0.85)' }
+                  : undefined
+              }
+            >
+              Vencidos
+            </div>
+          </div>
+          <div className="card">
+            <div className="metrica">{vencimentos?.proximos.length ?? '—'}</div>
+            <div className="metrica-label">Próximos {diasAviso} dias</div>
           </div>
         </div>
-        <div className="card">
-          <div className="metrica">{vencimentos?.proximos.length ?? '—'}</div>
-          <div className="metrica-label">Próximos {diasAviso} dias</div>
-        </div>
-      </div>
+      ) : (
+        <p style={{ color: 'var(--texto-suave)', fontSize: 14, marginBottom: 24 }}>
+          O aviso de vencimento sanitário está desativado nas Configurações da fazenda.
+        </p>
+      )}
 
       {temOvinos && famacha && (famacha.totalAvaliados > 0 || famacha.semAvaliacao > 0) && (
         <>

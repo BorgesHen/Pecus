@@ -1,6 +1,6 @@
 import { PrismaClient, PapelUsuario, TipoMetodoManejo } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { PLANO_CONTAS_PADRAO } from '../src/server/financeiro/plano-contas-padrao';
+import { criarPlanoContasPadrao } from '../src/server/financeiro/plano-contas.service';
 
 const prisma = new PrismaClient();
 
@@ -50,18 +50,7 @@ async function main() {
     select: { id: true },
   });
   for (const { id: empresaId } of empresasSemPlanoContas) {
-    for (const grupo of PLANO_CONTAS_PADRAO) {
-      await prisma.grupoFinanceiro.create({
-        data: {
-          empresaId,
-          natureza: grupo.natureza,
-          codigo: grupo.codigo,
-          nome: grupo.nome,
-          ordem: grupo.ordem,
-          contas: { create: grupo.contas },
-        },
-      });
-    }
+    await criarPlanoContasPadrao(prisma, empresaId);
   }
   if (empresasSemPlanoContas.length > 0) {
     console.log(`Plano de contas padrão criado para ${empresasSemPlanoContas.length} empresa(s).`);

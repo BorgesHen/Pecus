@@ -24,14 +24,20 @@ export async function listarPorArea(empresaId: string, areaId: string) {
       },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.empresa.findUnique({ where: { id: empresaId }, select: { alturaIdealPastoPadrao: true } }),
+    prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { alturaIdealPastoPadrao: true, alturaIdealPastoAtiva: true },
+    }),
   ]);
+  // Fazenda que desligou a altura ideal continua registrando as medições, só
+  // não recebe mais o julgamento de "pronto pra receber o gado".
+  const usaAlturaIdeal = empresa?.alturaIdealPastoAtiva ?? true;
   const alturaIdealPastoPadrao = empresa?.alturaIdealPastoPadrao ?? 60;
   return piquetes.map(({ registrosAltura, ocupacoes, ...piquete }) => ({
     ...piquete,
     ultimaAltura: registrosAltura[0] ?? null,
     ocupadoAtualmente: ocupacoes.length > 0,
-    alturaIdealEfetiva: piquete.alturaIdealCm ?? alturaIdealPastoPadrao,
+    alturaIdealEfetiva: usaAlturaIdeal ? piquete.alturaIdealCm ?? alturaIdealPastoPadrao : null,
   }));
 }
 

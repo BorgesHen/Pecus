@@ -61,7 +61,7 @@ function CadastroForm() {
             className="input"
             value={form.codigoConvite}
             onChange={(e) => set('codigoConvite', e.target.value.toUpperCase())}
-            placeholder="Recebido depois de fechar com a Pecus"
+            placeholder="Se não possuir o código, entre em contato com o administrador"
           />
         </div>
         <div className="campo">

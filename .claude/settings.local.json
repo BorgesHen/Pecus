@@ -1,5 +1,12 @@
 {
-    "permissions": {
-        "allow": ["Bash"]
-    }
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Bash(python3 -c ' *)",
+      "Bash(npx tsc *)",
+      "Bash(NEXT_DIST_DIR=.next-claude npx next build)",
+      "Bash(npx ts-node *)",
+      "Bash(pkill -f \"next start -p 3034\")"
+    ]
+  }
 }

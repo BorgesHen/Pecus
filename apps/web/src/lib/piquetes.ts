@@ -4,7 +4,8 @@ import type { Piquete, RegistroAlturaPasto } from '@pecus/shared';
 export interface PiqueteComStatus extends Piquete {
   ultimaAltura: RegistroAlturaPasto | null;
   ocupadoAtualmente: boolean;
-  alturaIdealEfetiva: number;
+  /** null = a fazenda desligou a altura ideal do capim nas Configurações. */
+  alturaIdealEfetiva: number | null;
 }
 
 export interface NovoPiquete {

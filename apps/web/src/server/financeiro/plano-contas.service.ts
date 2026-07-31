@@ -1,7 +1,48 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../prisma';
+import { PLANO_CONTAS_PADRAO } from './plano-contas-padrao';
 import type { CriarGrupoFinanceiroDto, AtualizarGrupoFinanceiroDto } from './dto/grupo-financeiro.dto';
 import type { CriarContaFinanceiraDto, AtualizarContaFinanceiraDto } from './dto/conta-financeira.dto';
+
+/** Aceita tanto o client normal quanto o `tx` de dentro de uma transação. */
+type ClientePrisma = PrismaClient | Prisma.TransactionClient;
+
+/**
+ * Cria o plano de contas padrão da fazenda em 3 idas ao banco (grupos em lote,
+ * releitura dos ids, contas em lote) em vez de uma por grupo.
+ *
+ * O motivo é latência: no cadastro isso roda dentro da transação que cria a
+ * fazenda, e um create por grupo dava ~10 round-trips — perto o bastante do
+ * timeout de transação do Prisma (5s) pra estourar em produção, onde a
+ * latência até o banco é maior que em desenvolvimento.
+ */
+export async function criarPlanoContasPadrao(cliente: ClientePrisma, empresaId: string) {
+  await cliente.grupoFinanceiro.createMany({
+    data: PLANO_CONTAS_PADRAO.map((grupo) => ({
+      empresaId,
+      natureza: grupo.natureza,
+      codigo: grupo.codigo,
+      nome: grupo.nome,
+      ordem: grupo.ordem,
+    })),
+  });
+
+  // createMany não devolve os registros criados, e as contas precisam do grupoId.
+  const gruposCriados = await cliente.grupoFinanceiro.findMany({
+    where: { empresaId },
+    select: { id: true, codigo: true },
+  });
+  const idPorCodigo = new Map(gruposCriados.map((g) => [g.codigo, g.id]));
+
+  await cliente.contaFinanceira.createMany({
+    data: PLANO_CONTAS_PADRAO.flatMap((grupo) => {
+      const grupoId = idPorCodigo.get(grupo.codigo);
+      if (!grupoId) return [];
+      return grupo.contas.map((conta) => ({ grupoId, codigo: conta.codigo, nome: conta.nome }));
+    }),
+  });
+}
 
 async function garantirGrupoDaEmpresa(empresaId: string, grupoId: string) {
   const grupo = await prisma.grupoFinanceiro.findFirst({ where: { id: grupoId, empresaId } });

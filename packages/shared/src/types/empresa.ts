@@ -13,6 +13,8 @@ export interface Empresa {
   rendimentoCarcacaPadrao: number;
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;
+  avisoVencimentoSanitarioAtivo: boolean;
+  alturaIdealPastoAtiva: boolean;
   camposDesativados: string[];
   recursosPersonalizados: string[];
 }

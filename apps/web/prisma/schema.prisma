@@ -133,6 +133,13 @@ model Empresa {
   /// Altura ideal do capim (cm) pra mover o gado pra um piquete, se ele não tiver override próprio.
   alturaIdealPastoPadrao      Float @default(60)
 
+  // Liga/desliga dos valores-padrão acima. Desligado, o sistema para de usar
+  // aquele parâmetro: sem aviso de vencimento sanitário (dashboard e tela de
+  // Sanidade) e sem comparação de altura ideal do capim (status "pronto pra
+  // receber o gado" nos piquetes). Os registros em si continuam existindo.
+  avisoVencimentoSanitarioAtivo Boolean @default(true)
+  alturaIdealPastoAtiva         Boolean @default(true)
+
   // Campos opcionais desativados por tela (painel de configuração), formato
   // "tela.campo" (ex: "lotes.rendimentoCarcaca"). Ver packages/shared
   // TELAS_CAMPOS_CONFIGURAVEIS pra lista de chaves válidas.

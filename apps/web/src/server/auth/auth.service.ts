@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { PapelUsuario, type UsuarioAutenticado } from '@pecus/shared';
 import { prisma } from '../prisma';
 import { assinarToken } from '../auth';
-import { PLANO_CONTAS_PADRAO } from '../financeiro/plano-contas-padrao';
+import { criarPlanoContasPadrao } from '../financeiro/plano-contas.service';
 import * as convitesService from '../convites/convites.service';
 import { checarBloqueioLogin, registrarTentativaLogin } from '../rate-limit';
 import type { LoginDto, RegistrarDto } from './dto';
@@ -64,20 +64,15 @@ export async function registrar(dto: RegistrarDto) {
       },
     });
 
-    for (const grupo of PLANO_CONTAS_PADRAO) {
-      await tx.grupoFinanceiro.create({
-        data: {
-          empresaId: empresa.id,
-          natureza: grupo.natureza,
-          codigo: grupo.codigo,
-          nome: grupo.nome,
-          ordem: grupo.ordem,
-          contas: { create: grupo.contas },
-        },
-      });
-    }
+    await criarPlanoContasPadrao(tx, empresa.id);
 
     return { usuario, empresa };
+  }, {
+    // A transação faz várias escritas em sequência; o padrão do Prisma (5s)
+    // não dá folga suficiente quando a latência até o banco é alta (produção
+    // serverless), e estourar aqui derruba o cadastro inteiro com erro 500.
+    timeout: 20_000,
+    maxWait: 10_000,
   });
 
   return gerarToken(resultado.usuario, resultado.empresa.id);

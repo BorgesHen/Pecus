@@ -177,33 +177,62 @@ export default function ConfiguracoesPage() {
               </p>
             </div>
             <div className="campo">
-              <label>Aviso de vencimento sanitário (dias)</label>
+              <label>
+                <span className="campo-toggle">
+                  <input
+                    type="checkbox"
+                    checked={config.avisoVencimentoSanitarioAtivo}
+                    onChange={() =>
+                      setConfig({
+                        ...config,
+                        avisoVencimentoSanitarioAtivo: !config.avisoVencimentoSanitarioAtivo,
+                      })
+                    }
+                  />
+                  Aviso de vencimento sanitário (dias)
+                </span>
+              </label>
               <input
                 className="input"
                 type="number"
+                disabled={!config.avisoVencimentoSanitarioAtivo}
                 value={config.sanidadeDiasAvisoVencimento}
                 onChange={(e) =>
                   setConfig({ ...config, sanidadeDiasAvisoVencimento: Number(e.target.value) })
                 }
               />
               <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginTop: 6 }}>
-                Com quantos dias de antecedência a tela de Sanidade avisa de uma aplicação
-                próxima do vencimento.
+                {config.avisoVencimentoSanitarioAtivo
+                  ? 'Com quantos dias de antecedência a tela de Sanidade avisa de uma aplicação próxima do vencimento.'
+                  : 'Desativado: a fazenda não recebe aviso de vencimento no painel nem na tela de Sanidade. O histórico continua registrado.'}
               </p>
             </div>
             <div className="campo">
-              <label>Altura ideal do capim (cm)</label>
+              <label>
+                <span className="campo-toggle">
+                  <input
+                    type="checkbox"
+                    checked={config.alturaIdealPastoAtiva}
+                    onChange={() =>
+                      setConfig({ ...config, alturaIdealPastoAtiva: !config.alturaIdealPastoAtiva })
+                    }
+                  />
+                  Altura ideal do capim (cm)
+                </span>
+              </label>
               <input
                 className="input"
                 type="number"
+                disabled={!config.alturaIdealPastoAtiva}
                 value={config.alturaIdealPastoPadrao}
                 onChange={(e) =>
                   setConfig({ ...config, alturaIdealPastoPadrao: Number(e.target.value) })
                 }
               />
               <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginTop: 6 }}>
-                Altura em que um piquete fica pronto pra receber o gado, se ele não tiver uma
-                altura ideal própria definida.
+                {config.alturaIdealPastoAtiva
+                  ? 'Altura em que um piquete fica pronto pra receber o gado, se ele não tiver uma altura ideal própria definida.'
+                  : 'Desativado: os piquetes deixam de mostrar o status "pronto pra receber o gado". As medições de altura continuam sendo registradas.'}
               </p>
             </div>
           </div>

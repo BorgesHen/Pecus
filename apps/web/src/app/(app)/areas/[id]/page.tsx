@@ -272,8 +272,13 @@ export default function DetalheAreaPage() {
 
       {piquetes &&
         piquetes.map((p) => {
+          // alturaIdealEfetiva nula = fazenda desligou a altura ideal nas Configurações,
+          // então não há como (nem por que) julgar se o piquete está pronto.
           const pronto =
-            !p.ocupadoAtualmente && p.ultimaAltura != null && p.ultimaAltura.alturaCm >= p.alturaIdealEfetiva;
+            p.alturaIdealEfetiva != null &&
+            !p.ocupadoAtualmente &&
+            p.ultimaAltura != null &&
+            p.ultimaAltura.alturaCm >= p.alturaIdealEfetiva;
           return (
             <div key={p.id} className="card" style={{ marginBottom: 12 }}>
               <div
@@ -315,9 +320,14 @@ export default function DetalheAreaPage() {
                     </span>
                   )}
                   <p style={{ color: 'var(--texto-suave)', fontSize: 14, marginTop: 6 }}>
-                    {p.areaHectares ? `${p.areaHectares} ha — ` : ''}
-                    Altura ideal: {p.alturaIdealCm ?? p.alturaIdealEfetiva} cm
-                    {p.alturaIdealCm == null ? ' (padrão da fazenda)' : ''}
+                    {p.areaHectares ? `${p.areaHectares} ha` : ''}
+                    {p.alturaIdealEfetiva != null && (
+                      <>
+                        {p.areaHectares ? ' — ' : ''}
+                        Altura ideal: {p.alturaIdealCm ?? p.alturaIdealEfetiva} cm
+                        {p.alturaIdealCm == null ? ' (padrão da fazenda)' : ''}
+                      </>
+                    )}
                   </p>
                   <p style={{ color: 'var(--texto-suave)', fontSize: 14 }}>
                     Última altura:{' '}
@@ -457,21 +467,23 @@ export default function DetalheAreaPage() {
                   }
                 />
               </div>
-              <div className="campo">
-                <label>Altura ideal (cm, opcional)</label>
-                <input
-                  className="input"
-                  type="number"
-                  placeholder={`${configEmpresa?.alturaIdealPastoPadrao ?? 60} (padrão)`}
-                  value={formPiquete.alturaIdealCm}
-                  onChange={(e) =>
-                    setFormPiquete({
-                      ...formPiquete,
-                      alturaIdealCm: e.target.value ? Number(e.target.value) : '',
-                    })
-                  }
-                />
-              </div>
+              {(configEmpresa?.alturaIdealPastoAtiva ?? true) && (
+                <div className="campo">
+                  <label>Altura ideal (cm, opcional)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    placeholder={`${configEmpresa?.alturaIdealPastoPadrao ?? 60} (padrão)`}
+                    value={formPiquete.alturaIdealCm}
+                    onChange={(e) =>
+                      setFormPiquete({
+                        ...formPiquete,
+                        alturaIdealCm: e.target.value ? Number(e.target.value) : '',
+                      })
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             <div className="modal-acoes">

@@ -496,6 +496,19 @@ a {
   align-items: flex-end;
 }
 
+/* Rótulo com liga/desliga do próprio parâmetro (ex: valores-padrão em Configurações). */
+.campo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.campo-toggle input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .topo-tela {
   display: flex;
   flex-wrap: wrap;

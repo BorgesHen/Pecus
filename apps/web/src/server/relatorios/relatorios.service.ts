@@ -30,20 +30,32 @@ export async function dashboard(empresaId: string) {
 
   const animais = await prisma.lote.aggregate({ where: { empresaId }, _sum: { quantidadeAnimais: true } });
 
-  const hoje = new Date();
-  const em7Dias = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const [vencidos, proximos7Dias] = await Promise.all([
-    prisma.eventoSanitario.count({ where: { empresaId, proximaAplicacao: { not: null, lt: hoje } } }),
-    prisma.eventoSanitario.count({ where: { empresaId, proximaAplicacao: { gte: hoje, lte: em7Dias } } }),
-  ]);
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: empresaId },
+    select: { sanidadeDiasAvisoVencimento: true, avisoVencimentoSanitarioAtivo: true },
+  });
 
-  return {
+  const base = {
     totalLotes: lotes,
     totalAnimais: animais._sum.quantidadeAnimais ?? 0,
     totalGasto: Number(totalGasto._sum.valor ?? 0),
-    vencimentosSanitarios: { vencidos, proximos7Dias },
     gastosPorCategoria: gastosPorCategoria.map((g) => ({ categoria: g.categoria, total: Number(g._sum.valor ?? 0) })),
   };
+
+  // Aviso desligado pela fazenda: nem calcula, e o dashboard esconde os cards.
+  if (empresa && !empresa.avisoVencimentoSanitarioAtivo) {
+    return { ...base, vencimentosSanitarios: null };
+  }
+
+  const diasAviso = empresa?.sanidadeDiasAvisoVencimento ?? 7;
+  const hoje = new Date();
+  const limite = new Date(hoje.getTime() + diasAviso * 24 * 60 * 60 * 1000);
+  const [vencidos, proximos] = await Promise.all([
+    prisma.eventoSanitario.count({ where: { empresaId, proximaAplicacao: { not: null, lt: hoje } } }),
+    prisma.eventoSanitario.count({ where: { empresaId, proximaAplicacao: { gte: hoje, lte: limite } } }),
+  ]);
+
+  return { ...base, vencimentosSanitarios: { vencidos, proximos, diasAviso } };
 }
 
 export async function custoPorArroba(empresaId: string, loteId: string) {

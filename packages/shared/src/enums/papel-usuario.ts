@@ -100,6 +100,10 @@ export interface ConfiguracaoEmpresa {
   rendimentoCarcacaPadrao: number;
   sanidadeDiasAvisoVencimento: number;
   alturaIdealPastoPadrao: number;
+  /** Desligado = sem alerta de vencimento sanitário (dashboard e tela de Sanidade). */
+  avisoVencimentoSanitarioAtivo: boolean;
+  /** Desligado = sem comparação de altura ideal do capim (status dos piquetes). */
+  alturaIdealPastoAtiva: boolean;
   camposDesativados: string[];
   /**
    * Recursos sob encomenda liberados pra esta fazenda (só o ADMIN altera, na

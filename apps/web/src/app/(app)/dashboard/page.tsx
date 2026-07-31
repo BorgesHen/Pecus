@@ -9,7 +9,8 @@ interface Dashboard {
   totalLotes: number;
   totalAnimais: number;
   totalGasto: number;
-  vencimentosSanitarios: { vencidos: number; proximos7Dias: number };
+  /** null = a fazenda desligou o aviso de vencimento sanitário nas Configurações. */
+  vencimentosSanitarios: { vencidos: number; proximos: number; diasAviso: number } | null;
   gastosPorCategoria: { categoria: string; total: number }[];
 }
 
@@ -49,32 +50,45 @@ export default function DashboardPage() {
               <div className="metrica">{brl(dados.totalGasto)}</div>
               <div className="metrica-label">Gasto total</div>
             </div>
-            <div
-              className="card"
-              style={
-                dados.vencimentosSanitarios.vencidos > 0
-                  ? { background: 'var(--erro)', color: '#fff' }
-                  : undefined
-              }
-            >
-              <div className="metrica" style={dados.vencimentosSanitarios.vencidos > 0 ? { color: '#fff' } : undefined}>
-                {dados.vencimentosSanitarios.vencidos}
-              </div>
-              <div
-                className="metrica-label"
-                style={dados.vencimentosSanitarios.vencidos > 0 ? { color: 'rgba(255,255,255,0.85)' } : undefined}
-              >
-                <Link href="/sanidade" style={{ color: 'inherit' }}>
-                  Vencidos (sanidade)
-                </Link>
-              </div>
-            </div>
-            <div className="card">
-              <div className="metrica">{dados.vencimentosSanitarios.proximos7Dias}</div>
-              <div className="metrica-label">
-                <Link href="/sanidade">Próximos 7 dias (sanidade)</Link>
-              </div>
-            </div>
+            {dados.vencimentosSanitarios && (
+              <>
+                <div
+                  className="card"
+                  style={
+                    dados.vencimentosSanitarios.vencidos > 0
+                      ? { background: 'var(--erro)', color: '#fff' }
+                      : undefined
+                  }
+                >
+                  <div
+                    className="metrica"
+                    style={dados.vencimentosSanitarios.vencidos > 0 ? { color: '#fff' } : undefined}
+                  >
+                    {dados.vencimentosSanitarios.vencidos}
+                  </div>
+                  <div
+                    className="metrica-label"
+                    style={
+                      dados.vencimentosSanitarios.vencidos > 0
+                        ? { color: 'rgba(255,255,255,0.85)' }
+                        : undefined
+                    }
+                  >
+                    <Link href="/sanidade" style={{ color: 'inherit' }}>
+                      Vencidos (sanidade)
+                    </Link>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="metrica">{dados.vencimentosSanitarios.proximos}</div>
+                  <div className="metrica-label">
+                    <Link href="/sanidade">
+                      Próximos {dados.vencimentosSanitarios.diasAviso} dias (sanidade)
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ marginTop: 24 }}>

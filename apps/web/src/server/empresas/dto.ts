@@ -78,6 +78,14 @@ export class AtualizarConfiguracaoEmpresaDto {
   alturaIdealPastoPadrao?: number;
 
   @IsOptional()
+  @IsBoolean()
+  avisoVencimentoSanitarioAtivo?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  alturaIdealPastoAtiva?: boolean;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   camposDesativados?: string[];

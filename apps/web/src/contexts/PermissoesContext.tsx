@@ -21,6 +21,13 @@ interface PermissoesContextValor {
   temRecurso: (chave: string) => boolean;
   /** Atualiza a configuração da empresa em todo o app (menu, forms) sem precisar recarregar a página. */
   definirConfigEmpresa: (config: ConfiguracaoEmpresa) => void;
+  /**
+   * Rebusca a configuração da empresa ativa no servidor e propaga pro app.
+   * Use quando a alteração não devolve a config da empresa ativa — por exemplo
+   * na tela de Recursos personalizados, onde o ADMIN pode estar editando outra
+   * fazenda (aí o rebusca simplesmente confirma a atual, sem efeito colateral).
+   */
+  recarregarConfigEmpresa: () => Promise<void>;
 }
 
 const PermissoesContext = createContext<PermissoesContextValor | null>(null);
@@ -58,6 +65,16 @@ export function PermissoesProvider({ children }: { children: React.ReactNode }) 
     campoAtivo: (chave) => campoAtivoRegistro(configEmpresa?.camposDesativados, chave),
     temRecurso: (chave) => recursoPersonalizadoAtivo(configEmpresa?.recursosPersonalizados, chave),
     definirConfigEmpresa: setConfigEmpresa,
+    // Best-effort de propósito: é só propagação de estado, então uma falha aqui
+    // (ex: ADMIN de suporte sem fazenda ativa) não pode fazer uma gravação que
+    // deu certo parecer que falhou pra quem clicou em Salvar.
+    recarregarConfigEmpresa: async () => {
+      try {
+        setConfigEmpresa(await obterConfiguracaoEmpresa());
+      } catch {
+        // mantém a configuração atual em memória
+      }
+    },
   };
 
   return <PermissoesContext.Provider value={valor}>{children}</PermissoesContext.Provider>;

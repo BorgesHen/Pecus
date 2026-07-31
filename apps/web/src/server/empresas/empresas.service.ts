@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PapelUsuario, CHAVES_CAMPOS_CONFIGURAVEIS, CHAVES_RECURSOS_PERSONALIZADOS } from '@pecus/shared';
 import { prisma } from '../prisma';
 import type {
@@ -22,6 +22,8 @@ const CAMPOS_CONFIGURACAO = {
   rendimentoCarcacaPadrao: true,
   sanidadeDiasAvisoVencimento: true,
   alturaIdealPastoPadrao: true,
+  avisoVencimentoSanitarioAtivo: true,
+  alturaIdealPastoAtiva: true,
   camposDesativados: true,
   recursosPersonalizados: true,
 } as const;
@@ -80,7 +82,13 @@ export async function atualizar(id: string, dto: AtualizarEmpresaDto) {
  * Sempre escopado pela empresaAtivaId do próprio usuário — nunca recebe um
  * id arbitrário do cliente.
  */
-export async function obterConfiguracao(empresaId: string) {
+export async function obterConfiguracao(empresaId: string | undefined) {
+  // O ADMIN de suporte pode não ter fazenda vinculada — sem isso a query iria
+  // com id undefined e estouraria um 500 genérico em vez de dizer o motivo.
+  if (!empresaId) {
+    throw new BadRequestException('Nenhuma fazenda ativa na sessão. Selecione uma fazenda para ver a configuração.');
+  }
+
   const empresa = await prisma.empresa.findUnique({
     where: { id: empresaId },
     select: CAMPOS_CONFIGURACAO,

@@ -7,7 +7,7 @@ import { AtualizarConfiguracaoEmpresaDto } from '@/server/empresas/dto';
 
 export const GET = rota(async (req) => {
   const { user } = await autorizar(req);
-  return empresasService.obterConfiguracao(user.empresaAtivaId!);
+  return empresasService.obterConfiguracao(user.empresaAtivaId);
 });
 
 export const PATCH = rota(async (req) => {

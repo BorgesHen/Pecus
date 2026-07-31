@@ -66,10 +66,20 @@ export async function aplicarEmMassa(empresaId: string, dto: AplicarEmMassaDto) 
   return { ok: true, animaisAfetados: animalIds.length };
 }
 
-/** Eventos vencidos e os que vencem nos próximos `dias`. Sem `dias`, usa o padrão da fazenda. */
+/**
+ * Eventos vencidos e os que vencem nos próximos `dias`. Sem `dias`, usa o
+ * padrão da fazenda — e se a fazenda desligou o aviso de vencimento, devolve
+ * vazio (os registros continuam lá, só não geram alerta).
+ */
 export async function proximosVencimentos(empresaId: string, dias?: number) {
   if (dias === undefined) {
-    const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { sanidadeDiasAvisoVencimento: true } });
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: { sanidadeDiasAvisoVencimento: true, avisoVencimentoSanitarioAtivo: true },
+    });
+    if (empresa && !empresa.avisoVencimentoSanitarioAtivo) {
+      return { vencidos: [], proximos: [], avisoDesativado: true as const };
+    }
     dias = empresa?.sanidadeDiasAvisoVencimento ?? 7;
   }
 
@@ -85,6 +95,7 @@ export async function proximosVencimentos(empresaId: string, dias?: number) {
   return {
     vencidos: eventos.filter((e) => e.proximaAplicacao! < hoje),
     proximos: eventos.filter((e) => e.proximaAplicacao! >= hoje),
+    avisoDesativado: false as const,
   };
 }
 
