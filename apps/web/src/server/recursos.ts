@@ -4,6 +4,9 @@ import { prisma } from './prisma';
 
 /** Recursos sob encomenda liberados pra essa fazenda (ver RECURSOS_PERSONALIZADOS). */
 export async function recursosDaEmpresa(empresaId: string): Promise<string[]> {
+  // Sem fazenda ativa não há recursos a consultar — devolve vazio em vez de
+  // estourar, porque quem chama usa isso só pra decidir se libera algo.
+  if (!empresaId) return [];
   const empresa = await prisma.empresa.findUnique({
     where: { id: empresaId },
     select: { recursosPersonalizados: true },

@@ -6,7 +6,11 @@
       "Bash(npx tsc *)",
       "Bash(NEXT_DIST_DIR=.next-claude npx next build)",
       "Bash(npx ts-node *)",
-      "Bash(pkill -f \"next start -p 3034\")"
+      "Bash(pkill -f \"next start -p 3034\")",
+      "Bash(cp logo.png /tmp/logo-antiga-backup.png)",
+      "Bash(cp logo-invertida.png /tmp/logo-invertida-antiga-backup.png)",
+      "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/logos/logo-web.png logo.png)",
+      "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/logos/logo-invertida-web.png logo-invertida.png)"
     ]
   }
 }

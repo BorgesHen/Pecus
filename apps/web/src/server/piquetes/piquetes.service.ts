@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { prisma } from '../prisma';
+import { garantirEmpresaAtiva } from '../empresa-ativa';
 import type { CriarPiqueteDto, AtualizarPiqueteDto, RegistrarAlturaDto, MoverGadoDto } from './dto';
 
 async function garantirAreaDaEmpresa(empresaId: string, areaId: string) {
@@ -14,6 +15,7 @@ async function garantirPiqueteDaEmpresa(empresaId: string, piqueteId: string) {
 }
 
 export async function listarPorArea(empresaId: string, areaId: string) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   await garantirAreaDaEmpresa(empresaId, areaId);
   const [piquetes, empresa] = await Promise.all([
     prisma.piquete.findMany({

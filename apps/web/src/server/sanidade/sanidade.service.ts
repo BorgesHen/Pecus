@@ -9,6 +9,7 @@ import {
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
+import { garantirEmpresaAtiva } from '../empresa-ativa';
 import type { CriarEventoSanitarioDto, AplicarEmMassaDto } from './dto';
 
 async function garantirAnimalDaEmpresa(empresaId: string, animalId: string) {
@@ -72,6 +73,7 @@ export async function aplicarEmMassa(empresaId: string, dto: AplicarEmMassaDto) 
  * vazio (os registros continuam lá, só não geram alerta).
  */
 export async function proximosVencimentos(empresaId: string, dias?: number) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   if (dias === undefined) {
     const empresa = await prisma.empresa.findUnique({
       where: { id: empresaId },
@@ -112,6 +114,7 @@ export function historicoRecente(empresaId: string, limite = 20) {
  * uma fração do rebanho em vez de todo ele.
  */
 export async function alertaFamacha(empresaId: string) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   const avaliacoes = await prisma.eventoSanitario.findMany({
     where: {
       empresaId,

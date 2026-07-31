@@ -1,5 +1,6 @@
 import { CategoriaGasto, TipoMetodoManejo, EspecieAnimal, ESPECIE_CONFIG } from '@pecus/shared';
 import { prisma } from '../prisma';
+import { garantirEmpresaAtiva } from '../empresa-ativa';
 
 const KG_POR_ARROBA = 15;
 const CATEGORIAS_ALIMENTACAO = [CategoriaGasto.RACAO, CategoriaGasto.SUPLEMENTO];
@@ -22,6 +23,7 @@ function rendimentoCarcacaDoLote(
 }
 
 export async function dashboard(empresaId: string) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   const [lotes, totalGasto, gastosPorCategoria] = await Promise.all([
     prisma.lote.count({ where: { empresaId } }),
     prisma.gasto.aggregate({ where: { empresaId }, _sum: { valor: true } }),
@@ -59,6 +61,7 @@ export async function dashboard(empresaId: string) {
 }
 
 export async function custoPorArroba(empresaId: string, loteId: string) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   const [lote, empresa] = await Promise.all([
     prisma.lote.findFirst({
       where: { id: loteId, empresaId },
@@ -99,6 +102,7 @@ export async function custoPorArroba(empresaId: string, loteId: string) {
 }
 
 export async function indicadoresMetodo(empresaId: string, loteId: string) {
+  empresaId = garantirEmpresaAtiva(empresaId);
   const [lote, empresa] = await Promise.all([
     prisma.lote.findFirst({
       where: { id: loteId, empresaId },
