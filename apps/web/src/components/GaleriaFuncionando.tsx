@@ -42,12 +42,17 @@ export function GaleriaFuncionando({ capturas }: { capturas: Captura[] }) {
           >
             ×
           </button>
-          <img
-            src={`/screenshots/${aberta.arquivo}.png`}
-            alt={aberta.legenda}
-            onClick={(e) => e.stopPropagation()}
-          />
-          <p onClick={(e) => e.stopPropagation()}>{aberta.legenda}</p>
+          {/* A imagem fica numa área com rolagem própria: no celular ela é
+              renderizada maior que a tela pra dar pra ler a interface, e o
+              usuário arrasta na horizontal. A legenda fica fora, então não
+              sai de vista junto. */}
+          <div className="landing-lightbox-area" onClick={(e) => e.stopPropagation()}>
+            <img src={`/screenshots/${aberta.arquivo}.png`} alt={aberta.legenda} />
+          </div>
+          <p onClick={(e) => e.stopPropagation()}>
+            {aberta.legenda}
+            <span className="landing-lightbox-dica">Arraste pra ver os detalhes.</span>
+          </p>
         </div>
       )}
     </>

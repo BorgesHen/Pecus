@@ -10,7 +10,13 @@
       "Bash(cp logo.png /tmp/logo-antiga-backup.png)",
       "Bash(cp logo-invertida.png /tmp/logo-invertida-antiga-backup.png)",
       "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/logos/logo-web.png logo.png)",
-      "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/logos/logo-invertida-web.png logo-invertida.png)"
+      "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/logos/logo-invertida-web.png logo-invertida.png)",
+      "Bash(sed 's/3039/3040/g' shot-mobile-galeria.js)",
+      "Bash(node shot-mob2.js /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/mob-galeria2.png /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/mob-modal2.png)",
+      "Bash(sed 's/3039/3040/g' medir-overflow.js)",
+      "Bash(node medir2.js \"http://localhost:3040/\")",
+      "Bash(pkill -f \"next start -p 3040\")",
+      "Bash(lsof -i:3000)"
     ]
   }
 }

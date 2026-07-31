@@ -924,7 +924,11 @@ html:not(.js) .ao-aparecer {
 
 .landing-galeria {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  /* O min() é o que segura a responsividade: sem ele o mínimo de 420px vale
+     mesmo em tela de 390px, a coluna estoura a viewport e o print fica
+     cortado. Com min(), em tela estreita o mínimo passa a ser 100% da
+     largura disponível e cai naturalmente pra uma coluna. */
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
   gap: 24px;
 }
 .landing-galeria-item {
@@ -964,12 +968,16 @@ html:not(.js) .ao-aparecer {
   padding: 56px 24px;
   cursor: zoom-out;
 }
+.landing-lightbox-area {
+  max-width: 100%;
+  cursor: default;
+}
 .landing-lightbox img {
+  display: block;
   max-width: 100%;
   max-height: 78vh;
   border-radius: var(--raio);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  cursor: default;
 }
 .landing-lightbox p {
   color: #fff;
@@ -978,6 +986,35 @@ html:not(.js) .ao-aparecer {
   text-align: center;
   max-width: 640px;
   cursor: default;
+}
+/* A dica de arrastar só faz sentido quando a imagem passa da largura da tela. */
+.landing-lightbox-dica {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .landing-lightbox {
+    padding: 56px 12px 20px;
+  }
+  /* Numa tela estreita, caber a imagem inteira deixaria ela do tamanho da
+     miniatura — o "ampliar" não ampliaria nada. Então renderiza num tamanho
+     legível e deixa arrastar na horizontal. */
+  .landing-lightbox-area {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .landing-lightbox img {
+    max-width: none;
+    width: 780px;
+    max-height: none;
+  }
+  .landing-lightbox-dica {
+    display: block;
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+  }
 }
 .landing-lightbox-fechar {
   position: absolute;
