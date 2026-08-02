@@ -106,6 +106,13 @@ export interface ConfiguracaoEmpresa {
   alturaIdealPastoAtiva: boolean;
   camposDesativados: string[];
   /**
+   * Localização da fazenda usada na previsão do tempo. Nulo = não definida,
+   * e aí a previsão cai na localização do navegador. Os três andam juntos.
+   */
+  climaLocalNome: string | null;
+  climaLatitude: number | null;
+  climaLongitude: number | null;
+  /**
    * Recursos sob encomenda liberados pra esta fazenda (só o ADMIN altera, na
    * tela "Recursos personalizados"). Vem junto da configuração pro front poder
    * esconder telas/campos de recursos que a fazenda não tem — ver

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PapelUsuario, CHAVES_CAMPOS_CONFIGURAVEIS, CHAVES_RECURSOS_PERSONALIZADOS } from '@pecus/shared';
 import { prisma } from '../prisma';
 import { garantirEmpresaAtiva } from '../empresa-ativa';
@@ -27,7 +27,13 @@ const CAMPOS_CONFIGURACAO = {
   alturaIdealPastoAtiva: true,
   camposDesativados: true,
   recursosPersonalizados: true,
+  climaLocalNome: true,
+  climaLatitude: true,
+  climaLongitude: true,
 } as const;
+
+/** Nome + coordenadas da localização do clima só fazem sentido juntos. */
+const CAMPOS_CLIMA = ['climaLocalNome', 'climaLatitude', 'climaLongitude'] as const;
 
 /** O Prisma guarda `camposDesativados`/`recursosPersonalizados` como Json; aqui eles sempre são array de strings. */
 function comoCamposDesativados<T extends { camposDesativados: unknown; recursosPersonalizados: unknown }>(
@@ -99,12 +105,42 @@ function filtrarChavesConhecidas(chaves: string[]): string[] {
   return chaves.filter((chave) => CHAVES_CAMPOS_CONFIGURAVEIS.includes(chave));
 }
 
+/**
+ * A localização do clima é um conjunto: salvar só o nome (ou só a latitude)
+ * deixaria a fazenda com uma localização que a previsão não consegue usar.
+ * Ou vêm os três com valor, ou os três nulos (limpar).
+ */
+function validarLocalizacaoClima(dto: AtualizarConfiguracaoEmpresaDto) {
+  const enviados = CAMPOS_CLIMA.filter((campo) => campo in dto);
+  if (enviados.length === 0) return;
+
+  if (enviados.length !== CAMPOS_CLIMA.length) {
+    throw new BadRequestException(
+      'Informe nome, latitude e longitude juntos para definir a localização da fazenda.',
+    );
+  }
+
+  const nulos = CAMPOS_CLIMA.filter((campo) => dto[campo] === null).length;
+  if (nulos !== 0 && nulos !== CAMPOS_CLIMA.length) {
+    throw new BadRequestException(
+      'Para remover a localização da fazenda, envie nome, latitude e longitude nulos.',
+    );
+  }
+
+  if (nulos === 0 && !String(dto.climaLocalNome ?? '').trim()) {
+    throw new BadRequestException('Informe o nome da localização da fazenda.');
+  }
+}
+
 export async function atualizarConfiguracao(empresaId: string, dto: AtualizarConfiguracaoEmpresaDto) {
+  validarLocalizacaoClima(dto);
+
   const empresa = await prisma.empresa.update({
     where: { id: empresaId },
     data: {
       ...dto,
       camposDesativados: dto.camposDesativados ? filtrarChavesConhecidas(dto.camposDesativados) : undefined,
+      climaLocalNome: dto.climaLocalNome === undefined ? undefined : dto.climaLocalNome?.trim() || null,
     },
     select: CAMPOS_CONFIGURACAO,
   });

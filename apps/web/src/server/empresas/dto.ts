@@ -89,6 +89,28 @@ export class AtualizarConfiguracaoEmpresaDto {
   @IsArray()
   @IsString({ each: true })
   camposDesativados?: string[];
+
+  /**
+   * Localização da fazenda pra previsão do tempo. Os três vêm juntos: com
+   * valor pra definir, todos `null` pra limpar. `@IsOptional()` do
+   * class-validator já deixa `null` passar; a coerência entre os três é
+   * checada no service.
+   */
+  @IsOptional()
+  @IsString()
+  climaLocalNome?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  climaLatitude?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  climaLongitude?: number | null;
 }
 
 /** Tela "Recursos personalizados" (só ADMIN): recursos sob encomenda liberados pra uma fazenda. */

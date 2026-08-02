@@ -856,6 +856,169 @@ a {
   background: #fff;
 }
 
+.clima-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.clima-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Alternador entre a localização da fazenda e a do aparelho. */
+.clima-origem {
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  background: var(--bg);
+}
+.clima-origem-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 170px;
+  padding: 5px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto-suave);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.clima-origem-botao:hover {
+  color: var(--texto);
+}
+.clima-origem-botao--ativo {
+  background: var(--verde);
+  color: #fff;
+  font-weight: 600;
+}
+.clima-origem-botao--ativo:hover {
+  color: #fff;
+}
+
+.clima-editar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: transparent;
+  color: var(--texto-suave);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.clima-editar:hover {
+  border-color: var(--verde);
+  color: var(--verde);
+}
+
+.clima-editor {
+  padding: 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--bg);
+}
+.clima-editor-ajuda {
+  margin-bottom: 10px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+.clima-editor-erro {
+  margin-top: 10px;
+  color: var(--erro);
+  font-size: 13px;
+}
+.clima-busca {
+  display: flex;
+  gap: 8px;
+}
+.clima-busca .input {
+  flex: 1;
+  min-width: 0;
+}
+.clima-busca .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.clima-resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.clima-resultado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--raio);
+  background: var(--card);
+  color: var(--texto);
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.clima-resultado:hover:not(:disabled) {
+  border-color: var(--verde);
+}
+.clima-resultado:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.clima-resultado em {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.clima-remover {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--erro);
+  font-size: 13px;
+  cursor: pointer;
+}
+.clima-remover:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.clima-local-atual {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+
 .previsao-tempo-grade {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -895,6 +1058,32 @@ a {
 @media (max-width: 720px) {
   .previsao-tempo-grade {
     grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+  /* No celular o alternador ocupa a linha, dividido entre os dois, com o
+     botão de editar ao lado (e não quebrando pra linha de baixo). */
+  .clima-acoes {
+    width: 100%;
+  }
+  /* flex:1 em vez de width:100% — assim o alternador estica até onde dá mas
+     deixa o botão de editar na mesma linha. */
+  .clima-origem {
+    flex: 1;
+    min-width: 0;
+  }
+  .clima-origem-botao {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    justify-content: center;
+  }
+  .clima-editar {
+    flex-shrink: 0;
+  }
+  .clima-busca {
+    flex-direction: column;
+  }
+  .clima-busca .btn {
+    justify-content: center;
   }
 }
 

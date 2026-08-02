@@ -38,6 +38,48 @@ export interface PrevisaoDia {
   icone: string;
 }
 
+export interface LocalClima {
+  /** Rótulo curto, o que aparece no botão (ex: "Passo Fundo"). */
+  nome: string;
+  /** Onde fica, pra desempatar cidades homônimas (ex: "Rio Grande do Sul, Brasil"). */
+  detalhe: string;
+  latitude: number;
+  longitude: number;
+}
+
+/**
+ * Busca de cidades pelo nome. Usa o geocoding da própria Open-Meteo — mesma
+ * fonte da previsão, sem chave de API — pra o usuário não precisar digitar
+ * coordenadas na mão.
+ */
+export async function buscarLocais(termo: string): Promise<{ locais: LocalClima[] }> {
+  const busca = termo.trim();
+  if (busca.length < 2) {
+    throw new BadRequestException('Digite pelo menos 2 letras pra buscar.');
+  }
+
+  const url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+  url.searchParams.set('name', busca);
+  url.searchParams.set('count', '8');
+  url.searchParams.set('language', 'pt');
+  url.searchParams.set('format', 'json');
+
+  const resp = await fetch(url, { signal: AbortSignal.timeout(8000) }).catch(() => null);
+  if (!resp || !resp.ok) {
+    throw new BadRequestException('Não foi possível buscar localidades agora.');
+  }
+
+  const dados = await resp.json();
+  const locais: LocalClima[] = (dados.results ?? []).map((r: Record<string, unknown>) => ({
+    nome: String(r.name),
+    detalhe: [r.admin1, r.country].filter(Boolean).join(', '),
+    latitude: Number(r.latitude),
+    longitude: Number(r.longitude),
+  }));
+
+  return { locais };
+}
+
 export async function previsao(lat: number, lon: number): Promise<{ dias: PrevisaoDia[] }> {
   if (Number.isNaN(lat) || Number.isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     throw new BadRequestException('Coordenadas inválidas.');

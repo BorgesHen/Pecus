@@ -151,6 +151,16 @@ model Empresa {
   // RECURSOS_PERSONALIZADOS.
   recursosPersonalizados Json @default("[]")
 
+  // Localização usada na previsão do tempo do painel. Fica na fazenda (e não
+  // no usuário) porque é a mesma pra todo mundo que trabalha nela — e o
+  // produtor costuma acessar o sistema de casa ou da cidade, longe do lugar
+  // que ele quer acompanhar. Nulo = ainda não definida (aí a previsão usa a
+  // localização do navegador). Os três andam juntos: ou todos preenchidos, ou
+  // todos nulos.
+  climaLocalNome String?
+  climaLatitude  Float?
+  climaLongitude Float?
+
   usuarios      UsuarioEmpresa[]
   lotes         Lote[]
   areas         Area[]
