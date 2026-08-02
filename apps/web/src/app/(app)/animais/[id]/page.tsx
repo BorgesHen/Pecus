@@ -164,7 +164,7 @@ export default function DetalheAnimalPage() {
 
   return (
     <div className="container">
-      <Link href="/animais" style={{ fontSize: 14, display: 'inline-block', marginBottom: 12 }}>
+      <Link href="/animais" className="link-voltar">
         ← Voltar
       </Link>
 

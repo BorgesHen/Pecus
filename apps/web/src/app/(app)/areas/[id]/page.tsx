@@ -205,7 +205,7 @@ export default function DetalheAreaPage() {
 
   return (
     <div className="container">
-      <Link href="/areas" style={{ fontSize: 14, display: 'inline-block', marginBottom: 12 }}>
+      <Link href="/areas" className="link-voltar">
         ← Voltar
       </Link>
 

@@ -6,6 +6,7 @@ import {
   listarInsumos,
   criarInsumo,
   registrarConsumo,
+  registrarEntrada,
   type InsumoComSaldo,
   type NovoInsumo,
 } from '@/lib/insumos';
@@ -13,6 +14,24 @@ import { usePermissoes } from '@/contexts/PermissoesContext';
 import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoInsumo = { nome: '', unidade: 'kg', estoqueMinimo: undefined };
+
+type TipoMovimento = 'ENTRADA' | 'SAIDA';
+
+/** Entrada e consumo usam o mesmo formulário; só muda o rótulo e o endpoint. */
+const MOVIMENTO = {
+  ENTRADA: {
+    titulo: 'Registrar entrada',
+    ajuda: 'Use para saldo inicial, ajuste de inventário, produção própria ou devolução. Compra com nota entra sozinha pelo Gasto.',
+    exemploObs: 'ex: saldo inicial, ajuste de inventário',
+    salvar: registrarEntrada,
+  },
+  SAIDA: {
+    titulo: 'Registrar consumo',
+    ajuda: 'Baixa de estoque: o que foi usado no rebanho ou na lavoura.',
+    exemploObs: 'ex: trato do Lote 03',
+    salvar: registrarConsumo,
+  },
+} satisfies Record<TipoMovimento, unknown>;
 
 export default function InsumosPage() {
   const { podeEditar, campoAtivo } = usePermissoes();
@@ -24,9 +43,12 @@ export default function InsumosPage() {
   const [form, setForm] = useState<NovoInsumo>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
 
-  const [modalConsumoAberto, setModalConsumoAberto] = useState<InsumoComSaldo | null>(null);
-  const [quantidadeConsumo, setQuantidadeConsumo] = useState<number | ''>('');
-  const [dataConsumo, setDataConsumo] = useState(new Date().toISOString().slice(0, 10));
+  const [movimento, setMovimento] = useState<{ insumo: InsumoComSaldo; tipo: TipoMovimento } | null>(
+    null,
+  );
+  const [quantidade, setQuantidade] = useState<number | ''>('');
+  const [dataMovimento, setDataMovimento] = useState(hojeISO());
+  const [observacao, setObservacao] = useState('');
 
   function carregar() {
     listarInsumos()
@@ -57,25 +79,28 @@ export default function InsumosPage() {
     }
   }
 
-  function abrirModalConsumo(insumo: InsumoComSaldo) {
-    setQuantidadeConsumo('');
-    setDataConsumo(new Date().toISOString().slice(0, 10));
-    setModalConsumoAberto(insumo);
+  function abrirMovimento(insumo: InsumoComSaldo, tipo: TipoMovimento) {
+    setQuantidade('');
+    setDataMovimento(hojeISO());
+    setObservacao('');
+    setMovimento({ insumo, tipo });
   }
 
-  async function salvarConsumo() {
-    if (!modalConsumoAberto || quantidadeConsumo === '') return;
+  async function salvarMovimento() {
+    if (!movimento || quantidade === '') return;
     setSalvando(true);
     setErro('');
     try {
-      await registrarConsumo(modalConsumoAberto.id, {
-        quantidade: Number(quantidadeConsumo),
-        data: dataConsumo,
+      await MOVIMENTO[movimento.tipo].salvar(movimento.insumo.id, {
+        quantidade: Number(quantidade),
+        data: dataMovimento,
+        observacao: observacao.trim() || undefined,
       });
-      setModalConsumoAberto(null);
+      setMovimento(null);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao registrar consumo');
+      const acao = movimento.tipo === 'ENTRADA' ? 'a entrada' : 'o consumo';
+      setErro(e instanceof Error ? e.message : `Erro ao registrar ${acao}`);
     } finally {
       setSalvando(false);
     }
@@ -91,8 +116,10 @@ export default function InsumosPage() {
       </div>
 
       <p style={{ color: 'var(--texto-suave)', marginBottom: 16, fontSize: 14 }}>
-        A entrada acontece automaticamente quando você lança um Gasto vinculado a este insumo (com
-        quantidade). O consumo é lançado manualmente aqui.
+        Quando você lança um Gasto vinculado a um insumo (com quantidade), a entrada acontece
+        automaticamente. Use <strong>Registrar entrada</strong> para o que entra sem passar por um
+        gasto — saldo inicial, ajuste de inventário, produção própria — e{' '}
+        <strong>Registrar consumo</strong> para dar baixa.
       </p>
 
       {erro && <div className="erro">{erro}</div>}
@@ -134,13 +161,22 @@ export default function InsumosPage() {
                       {i.estoqueMinimo != null ? `${i.estoqueMinimo} ${i.unidade}` : '—'}
                     </td>
                     <td data-label="">
-                      <button
-                        className="btn-secundario"
-                        onClick={() => abrirModalConsumo(i)}
-                        disabled={!podeEditarEstoque}
-                      >
-                        Registrar consumo
-                      </button>
+                      <div className="acoes-celula">
+                        <button
+                          className="btn-secundario"
+                          onClick={() => abrirMovimento(i, 'ENTRADA')}
+                          disabled={!podeEditarEstoque}
+                        >
+                          Registrar entrada
+                        </button>
+                        <button
+                          className="btn-secundario"
+                          onClick={() => abrirMovimento(i, 'SAIDA')}
+                          disabled={!podeEditarEstoque}
+                        >
+                          Registrar consumo
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -196,19 +232,30 @@ export default function InsumosPage() {
         </div>
       )}
 
-      {modalConsumoAberto && (
-        <div className="modal-overlay" onClick={() => setModalConsumoAberto(null)}>
+      {movimento && (
+        <div className="modal-overlay" onClick={() => setMovimento(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Registrar consumo — {modalConsumoAberto.nome}</h3>
+            <h3>
+              {MOVIMENTO[movimento.tipo].titulo} — {movimento.insumo.nome}
+            </h3>
+
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginBottom: 12 }}>
+              {MOVIMENTO[movimento.tipo].ajuda}
+              <br />
+              Saldo atual: <strong>
+                {movimento.insumo.saldoAtual} {movimento.insumo.unidade}
+              </strong>
+            </p>
 
             <div className="linha-campos">
               <div className="campo">
-                <label>Quantidade ({modalConsumoAberto.unidade})</label>
+                <label>Quantidade ({movimento.insumo.unidade})</label>
                 <input
                   className="input"
                   type="number"
-                  value={quantidadeConsumo}
-                  onChange={(e) => setQuantidadeConsumo(e.target.value ? Number(e.target.value) : '')}
+                  min={0}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value ? Number(e.target.value) : '')}
                 />
               </div>
               <div className="campo">
@@ -217,17 +264,31 @@ export default function InsumosPage() {
                   className="input"
                   type="date"
                   max={hojeISO()}
-                  value={dataConsumo}
-                  onChange={(e) => setDataConsumo(e.target.value)}
+                  value={dataMovimento}
+                  onChange={(e) => setDataMovimento(e.target.value)}
                 />
               </div>
             </div>
 
+            <div className="campo">
+              <label>Observação (opcional)</label>
+              <input
+                className="input"
+                placeholder={MOVIMENTO[movimento.tipo].exemploObs}
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+              />
+            </div>
+
             <div className="modal-acoes">
-              <button className="btn-secundario" onClick={() => setModalConsumoAberto(null)}>
+              <button className="btn-secundario" onClick={() => setMovimento(null)}>
                 Cancelar
               </button>
-              <button className="btn" onClick={salvarConsumo} disabled={salvando || quantidadeConsumo === ''}>
+              <button
+                className="btn"
+                onClick={salvarMovimento}
+                disabled={salvando || quantidade === '' || Number(quantidade) <= 0}
+              >
                 {salvando ? 'Salvando...' : 'Salvar'}
               </button>
             </div>

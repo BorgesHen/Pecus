@@ -41,3 +41,23 @@ export class RegistrarConsumoDto {
   @IsString()
   observacao?: string;
 }
+
+/**
+ * Entrada manual de estoque. A entrada normal vem de um Gasto com insumo +
+ * quantidade (compra), que já lança o movimento e fica com `gastoId`
+ * preenchido. Esta é para o que entra sem passar por um gasto: saldo inicial
+ * ao começar a usar o sistema, ajuste de inventário, produção própria,
+ * devolução, doação.
+ */
+export class RegistrarEntradaDto {
+  @IsNumber()
+  @Min(0.01)
+  quantidade: number;
+
+  @IsDateString()
+  data: string;
+
+  @IsOptional()
+  @IsString()
+  observacao?: string;
+}

@@ -176,6 +176,27 @@ a {
   .container {
     padding: 16px;
   }
+
+  /* Quadros de valores (Animais, Peso de entrada, GMD...) no celular: com o
+     mínimo de 200px cada um ocupava a linha inteira, virando uma pilha longa
+     de caixas enormes. Aqui eles passam a caber dois por linha, mais compactos.
+     O :has(.metrica) restringe às grades de indicadores — as grades de cards
+     com texto (recursos da landing, módulos das Configurações) continuam
+     numa coluna, que é o certo pra leitura. */
+  .grid-cards:has(.metrica) {
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+    gap: 12px;
+  }
+  .grid-cards:has(.metrica) > .card {
+    padding: 14px 16px;
+  }
+  .metrica {
+    font-size: 22px;
+    /* Valores longos ("R$ 23.440,00", "Lote 02 - Confinamento") não podem
+       estourar a caixa nem vazar pro lado. */
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+  }
 }
 
 .gasto-categoria-linha {
@@ -218,18 +239,76 @@ a {
   height: 100vh;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  transition: width 0.22s ease, padding 0.22s ease;
+}
+
+/* Barra recolhida: largura de um ícone só. O texto sai de cena, mas continua
+   no DOM (leitor de tela e o title do link seguem funcionando). */
+.shell-sidebar--recolhida {
+  width: 72px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Na primeira pintura a preferência do localStorage ainda não foi lida — sem
+   isso a barra de quem a deixou recolhida "anima" sozinha ao abrir a página. */
+.shell-sidebar--sem-transicao,
+.shell-sidebar--sem-transicao * {
+  transition: none !important;
 }
 
 /* A logo é recortada justa (sem moldura de espaço vazio embutida), então o
    respiro vem daqui — sem o padding ela encosta na borda da barra. */
 .shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 18px 0 4px;
   margin-bottom: 14px;
 }
 .shell-brand img {
   display: block;
-  width: 100%;
+  min-width: 0;
+  flex: 1;
   height: auto;
+}
+.shell-brand-marca {
+  width: 38px;
+  flex: 0 0 38px;
+  margin: 0 auto;
+}
+
+.shell-recolher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--raio);
+  color: #fff;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.shell-recolher:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+/* Recolhida, o botão vira uma faixa abaixo da marca (não sobra largura ao lado). */
+.shell-sidebar--recolhida .shell-brand {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shell-empresas {
+  padding: 0 0 16px;
+}
+.shell-sidebar--recolhida .shell-empresas {
+  display: none;
 }
 
 .shell-nav {
@@ -239,6 +318,9 @@ a {
   gap: 4px;
 }
 .shell-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: #fff;
   text-decoration: none;
   padding: 10px 12px;
@@ -247,7 +329,7 @@ a {
   opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 .shell-nav-link:hover {
   background: rgba(255, 255, 255, 0.1);
@@ -258,10 +340,29 @@ a {
   opacity: 1;
   font-weight: 600;
 }
+.shell-nav-icone {
+  flex-shrink: 0;
+}
+.shell-nav-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Recolhida: ícone centralizado e rótulo fora de cena. */
+.shell-sidebar--recolhida .shell-nav-link {
+  justify-content: center;
+  gap: 0;
+  padding: 11px 0;
+}
+.shell-sidebar--recolhida .shell-nav-texto,
+.shell-sidebar--recolhida .shell-sair .shell-nav-texto {
+  display: none;
+}
 
 .shell-nav-grupo {
   display: flex;
   flex-direction: column;
+  position: relative; /* âncora do submenu flutuante quando recolhida */
 }
 .shell-nav-linha {
   display: flex;
@@ -273,16 +374,18 @@ a {
   min-width: 0;
 }
 .shell-nav-seta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: #fff;
   opacity: 0.7;
   cursor: pointer;
-  font-size: 12px;
-  padding: 10px 8px;
+  padding: 10px 6px;
   line-height: 1;
   flex-shrink: 0;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease, opacity 0.15s ease;
 }
 .shell-nav-seta:hover {
   opacity: 1;
@@ -290,18 +393,81 @@ a {
 .shell-nav-seta--aberta {
   transform: rotate(-180deg);
 }
+/* Recolhida não há espaço pra seta — o submenu abre no hover do grupo. */
+.shell-sidebar--recolhida .shell-nav-seta {
+  display: none;
+}
+
+/* Cascata: anima abrindo/fechando em vez de aparecer seco. */
 .shell-nav-filhos {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  overflow: hidden;
+  transition: grid-template-rows 0.22s ease, opacity 0.18s ease, margin 0.22s ease;
+  margin: 0;
+}
+.shell-nav-filhos--aberta {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin: 2px 0 4px;
+}
+.shell-nav-filhos-interno {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 2px 0 4px;
+  min-height: 0;
 }
 .shell-nav-link--filho {
   padding-left: 28px;
   font-size: 14px;
 }
 
+/* Recolhida, os submenus viram um painel flutuante ao lado do ícone.
+   É `fixed` (com top/left calculados no hover) porque a barra tem
+   `overflow-y: auto`, e um container que rola recorta os dois eixos —
+   `absolute` deixaria o painel cortado dentro dos 72px da barra. */
+.shell-sidebar--recolhida .shell-nav-filhos {
+  position: fixed;
+  z-index: 45;
+  margin: 0;
+  /* o padding cobre o vão até a borda da barra, então o mouse não "cai"
+     no caminho entre o ícone e o painel */
+  padding-left: 10px;
+  grid-template-rows: 1fr;
+  opacity: 0;
+  pointer-events: none;
+  overflow: visible;
+  transform: translateX(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.shell-sidebar--recolhida .shell-nav-grupo:hover .shell-nav-filhos,
+.shell-sidebar--recolhida .shell-nav-grupo:focus-within .shell-nav-filhos {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+.shell-sidebar--recolhida .shell-nav-filhos-interno {
+  min-width: 190px;
+  padding: 6px;
+  border-radius: var(--raio);
+  background: var(--verde);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.shell-sidebar--recolhida .shell-nav-link--filho {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+}
+.shell-sidebar--recolhida .shell-nav-link--filho .shell-nav-texto {
+  display: initial;
+}
+
 .shell-sair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.5);
   color: #fff;
@@ -309,9 +475,13 @@ a {
   padding: 10px 12px;
   font-size: 15px;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 .shell-sair:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+.shell-sidebar--recolhida .shell-sair {
+  padding: 11px 0;
 }
 
 .shell-conteudo {
@@ -372,6 +542,11 @@ a {
     transform: translateX(0);
   }
 
+  /* A gaveta do celular já abre por cima do conteúdo: recolher não se aplica. */
+  .shell-recolher {
+    display: none;
+  }
+
   .shell-overlay {
     display: block;
     position: fixed;
@@ -395,6 +570,25 @@ a {
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
+}
+
+/* "← Voltar" das telas de detalhe: mesmo padrão verde do btn-secundario, mas
+   mais compacto, já que é navegação e não a ação principal da tela. */
+.link-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--verde);
+  border: 1px solid var(--verde);
+  border-radius: var(--raio);
+  font-size: 14px;
+  text-decoration: none;
+}
+.link-voltar:hover {
+  background: rgba(47, 93, 58, 0.08);
 }
 .btn-secundario:hover {
   background: rgba(47, 93, 58, 0.08);
@@ -558,6 +752,13 @@ a {
   cursor: pointer;
 }
 
+/* Célula de ações com mais de um botão. */
+.acoes-celula {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (max-width: 720px) {
   .tabela-wrap {
     background: transparent;
@@ -594,6 +795,15 @@ a {
     color: var(--texto-suave);
     font-size: 12px;
     text-transform: uppercase;
+  }
+  /* No card do celular os botões da célula de ações ocupam a linha inteira,
+     em vez de brigarem por espaço à direita. */
+  .acoes-celula {
+    flex: 1;
+    margin-top: 4px;
+  }
+  .acoes-celula > * {
+    flex: 1 1 140px;
   }
 }
 

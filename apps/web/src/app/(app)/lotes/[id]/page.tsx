@@ -184,7 +184,7 @@ export default function DetalheLotePage() {
 
   return (
     <div className="container">
-      <Link href="/lotes" style={{ fontSize: 14, display: 'inline-block', marginBottom: 12 }}>
+      <Link href="/lotes" className="link-voltar">
         ← Voltar
       </Link>
 

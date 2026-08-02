@@ -3,7 +3,12 @@ import { TipoMovimentoInsumo } from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { prisma } from '../prisma';
 import * as empresasService from '../empresas/empresas.service';
-import type { CriarInsumoDto, AtualizarInsumoDto, RegistrarConsumoDto } from './dto';
+import type {
+  CriarInsumoDto,
+  AtualizarInsumoDto,
+  RegistrarConsumoDto,
+  RegistrarEntradaDto,
+} from './dto';
 
 async function calcularSaldo(insumoId: string) {
   const [entradas, saidas] = await Promise.all([
@@ -15,7 +20,24 @@ async function calcularSaldo(insumoId: string) {
 
 export async function listar(empresaId: string) {
   const insumos = await prisma.insumo.findMany({ where: { empresaId }, orderBy: { nome: 'asc' } });
-  return Promise.all(insumos.map(async (insumo) => ({ ...insumo, saldoAtual: await calcularSaldo(insumo.id) })));
+  if (insumos.length === 0) return [];
+
+  // Um groupBy só, em vez de dois aggregates por insumo. O N+1 anterior abria
+  // 2*N consultas concorrentes e podia esgotar o pool de conexões do banco.
+  const totais = await prisma.movimentoInsumo.groupBy({
+    by: ['insumoId', 'tipo'],
+    where: { insumoId: { in: insumos.map((i) => i.id) } },
+    _sum: { quantidade: true },
+  });
+
+  const saldos = new Map<string, number>();
+  for (const total of totais) {
+    const quantidade = total._sum.quantidade ?? 0;
+    const sinal = total.tipo === TipoMovimentoInsumo.ENTRADA ? 1 : -1;
+    saldos.set(total.insumoId, (saldos.get(total.insumoId) ?? 0) + sinal * quantidade);
+  }
+
+  return insumos.map((insumo) => ({ ...insumo, saldoAtual: saldos.get(insumo.id) ?? 0 }));
 }
 
 export async function detalhar(empresaId: string, id: string) {
@@ -49,5 +71,16 @@ export async function registrarConsumo(empresaId: string, insumoId: string, dto:
   await detalhar(empresaId, insumoId);
   return prisma.movimentoInsumo.create({
     data: { empresaId, insumoId, tipo: TipoMovimentoInsumo.SAIDA, quantidade: dto.quantidade, data: new Date(dto.data), observacao: dto.observacao },
+  });
+}
+
+/**
+ * Entrada manual. Fica sem `gastoId` de propósito: é o que separa o que entrou
+ * por compra registrada (rastreável até o gasto) do que foi lançado à mão.
+ */
+export async function registrarEntrada(empresaId: string, insumoId: string, dto: RegistrarEntradaDto) {
+  await detalhar(empresaId, insumoId);
+  return prisma.movimentoInsumo.create({
+    data: { empresaId, insumoId, tipo: TipoMovimentoInsumo.ENTRADA, quantidade: dto.quantidade, data: new Date(dto.data), observacao: dto.observacao },
   });
 }

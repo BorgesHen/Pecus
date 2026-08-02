@@ -96,23 +96,39 @@ export async function listarMatrizes(empresaId: string, especie?: EspecieAnimal)
     orderBy: { identificador: 'asc' },
   });
 
-  return Promise.all(
-    animais.map(async (animal) => {
-      const [ultimoDiagnostico, ultimoEvento] = await Promise.all([
-        prisma.eventoReprodutivo.findFirst({
-          where: { animalId: animal.id, tipo: TipoEventoReprodutivo.DIAGNOSTICO_GESTACAO },
-          orderBy: { data: 'desc' },
-        }),
-        prisma.eventoReprodutivo.findFirst({ where: { animalId: animal.id }, orderBy: { data: 'desc' } }),
-      ]);
+  if (animais.length === 0) return [];
 
-      return {
-        ...animal,
-        statusReprodutivo: ultimoDiagnostico?.resultado ?? null,
-        ultimoEvento: ultimoEvento ? { tipo: ultimoEvento.tipo, data: ultimoEvento.data } : null,
-      };
-    }),
-  );
+  // Uma única consulta pra todos os eventos das matrizes, em vez de duas por
+  // matriz. O N+1 anterior disparava 2*N consultas em paralelo e estourava o
+  // pool de conexões do banco — o que derrubava não só esta tela, mas todas as
+  // outras que precisassem de conexão ao mesmo tempo.
+  const eventos = await prisma.eventoReprodutivo.findMany({
+    where: { empresaId, animalId: { in: animais.map((a) => a.id) } },
+    orderBy: { data: 'desc' },
+    select: { animalId: true, tipo: true, data: true, resultado: true },
+  });
+
+  // Como já vêm ordenados por data desc, o primeiro de cada animal é o mais recente.
+  const ultimoEventoPorAnimal = new Map<string, (typeof eventos)[number]>();
+  const ultimoDiagnosticoPorAnimal = new Map<string, (typeof eventos)[number]>();
+  for (const evento of eventos) {
+    if (!ultimoEventoPorAnimal.has(evento.animalId)) ultimoEventoPorAnimal.set(evento.animalId, evento);
+    if (
+      evento.tipo === TipoEventoReprodutivo.DIAGNOSTICO_GESTACAO &&
+      !ultimoDiagnosticoPorAnimal.has(evento.animalId)
+    ) {
+      ultimoDiagnosticoPorAnimal.set(evento.animalId, evento);
+    }
+  }
+
+  return animais.map((animal) => {
+    const ultimoEvento = ultimoEventoPorAnimal.get(animal.id);
+    return {
+      ...animal,
+      statusReprodutivo: ultimoDiagnosticoPorAnimal.get(animal.id)?.resultado ?? null,
+      ultimoEvento: ultimoEvento ? { tipo: ultimoEvento.tipo, data: ultimoEvento.data } : null,
+    };
+  });
 }
 
 /**

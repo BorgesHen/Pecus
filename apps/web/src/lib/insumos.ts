@@ -31,6 +31,17 @@ export function listarMovimentosInsumo(id: string) {
   return api<MovimentoInsumo[]>(`/insumos/${id}/movimentos`);
 }
 
-export function registrarConsumo(id: string, dados: { quantidade: number; data: string; observacao?: string }) {
+export interface MovimentoManual {
+  quantidade: number;
+  data: string;
+  observacao?: string;
+}
+
+export function registrarConsumo(id: string, dados: MovimentoManual) {
   return api<MovimentoInsumo>(`/insumos/${id}/consumir`, { method: 'POST', body: dados });
+}
+
+/** Entrada lançada à mão (saldo inicial, ajuste, produção própria) — sem gasto vinculado. */
+export function registrarEntrada(id: string, dados: MovimentoManual) {
+  return api<MovimentoInsumo>(`/insumos/${id}/entrada`, { method: 'POST', body: dados });
 }
