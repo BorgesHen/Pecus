@@ -6,6 +6,8 @@ import {
   ModuloSistema,
   TIPOS_METODO_A_PASTO,
   EspecieAnimal,
+  calcularCompraLote,
+  temDadosDeCompra,
   LABEL_ESPECIE_ANIMAL,
   RECURSO_OVINOS,
   type MetodoManejo,
@@ -20,7 +22,9 @@ import {
 } from '@/lib/lotes';
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
+import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
 import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoLote = {
@@ -37,6 +41,7 @@ const FORM_VAZIO: NovoLote = {
 
 export default function LotesPage() {
   const router = useRouter();
+  const toast = useToast();
   const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarLotes = podeEditar(ModuloSistema.LOTES);
   // Fazenda que só cria gado nem vê o seletor de espécie — a tela fica igual à de antes.
@@ -49,6 +54,7 @@ export default function LotesPage() {
   const [form, setForm] = useState<NovoLote>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [paraExcluir, setParaExcluir] = useState<LoteComContagem | null>(null);
+  const [simuladorAberto, setSimuladorAberto] = useState(false);
 
   function carregar() {
     listarLotes()
@@ -67,15 +73,52 @@ export default function LotesPage() {
     setModalAberto(true);
   }
 
+  /**
+   * O simulador roda antes do cadastro: primeiro se decide se a compra vale a
+   * pena, e só então o lote nasce já com o custo dentro. Reabrir a partir do
+   * cadastro fecha o modal do lote pra não empilhar dois — o formulário
+   * preenchido continua no estado.
+   */
+  function abrirSimulador() {
+    setModalAberto(false);
+    setSimuladorAberto(true);
+  }
+
+  function aplicarCompra(dados: DadosCompraSimulada) {
+    setForm((f) => ({
+      ...f,
+      quantidadeAnimais: dados.quantidadeAnimais,
+      pesoMedioCompra: dados.pesoMedioCompra,
+      valorKgCompra: dados.valorKgCompra,
+      fretePorCabeca: dados.fretePorCabeca,
+      comissaoPorCabeca: dados.comissaoPorCabeca,
+      // Na planilha do produtor o peso de entrada na pastagem começa igual ao
+      // peso de compra; deixa preenchido e ele ajusta na pesagem se precisar.
+      pesoMedioEntrada: f.pesoMedioEntrada ?? dados.pesoMedioCompra,
+    }));
+    setSimuladorAberto(false);
+    setModalAberto(true);
+  }
+
+  function limparCompra() {
+    setForm((f) => ({
+      ...f,
+      pesoMedioCompra: undefined,
+      valorKgCompra: undefined,
+      fretePorCabeca: undefined,
+      comissaoPorCabeca: undefined,
+    }));
+  }
+
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       await criarLote(form);
       setModalAberto(false);
+      toast.sucesso(`Lote "${form.identificacao}" cadastrado com ${form.quantidadeAnimais} animal(is).`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar lote');
+      toast.erroDe(e, 'Erro ao salvar lote');
     } finally {
       setSalvando(false);
     }
@@ -88,17 +131,28 @@ export default function LotesPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const identificacao = paraExcluir.identificacao;
     try {
       await removerLote(paraExcluir.id);
+      toast.sucesso(`Lote "${identificacao}" excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir lote');
+      toast.erroDe(e, 'Erro ao excluir lote');
     } finally {
       setParaExcluir(null);
     }
   }
 
   const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+  const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const resumoCompraForm = calcularCompraLote({
+    pesoMedioCompra: form.pesoMedioCompra ?? 0,
+    valorKgCompra: form.valorKgCompra ?? 0,
+    fretePorCabeca: form.fretePorCabeca ?? 0,
+    comissaoPorCabeca: form.comissaoPorCabeca ?? 0,
+    quantidadeAnimais: form.quantidadeAnimais,
+  });
 
   const metodoSelecionado = metodos.find((m) => m.id === form.metodoManejoId);
   const usaPasto = metodoSelecionado ? TIPOS_METODO_A_PASTO.includes(metodoSelecionado.tipo) : false;
@@ -107,9 +161,14 @@ export default function LotesPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Lotes</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeEditarLotes}>
-          + Novo lote
-        </button>
+        <div className="acoes-celula">
+          <button className="btn-secundario" onClick={abrirSimulador} disabled={!podeEditarLotes}>
+            Simular compra
+          </button>
+          <button className="btn" onClick={abrirModal} disabled={!podeEditarLotes}>
+            + Novo lote
+          </button>
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}
@@ -179,6 +238,47 @@ export default function LotesPage() {
         <div className="modal-overlay" onClick={() => setModalAberto(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Novo lote</h3>
+
+            {/* Resumo do que veio do simulador — sem ele o custo da compra
+                ficaria salvo sem aparecer em lugar nenhum no cadastro. */}
+            {temDadosDeCompra(form) ? (
+              <div className="simulador-resultado" style={{ marginTop: 0 }}>
+                <div className="compra-resumo">
+                  <div className="compra-resumo-item">
+                    <span>Custo por cabeça</span>
+                    <strong>{brl(resumoCompraForm.custoPorCabeca)}</strong>
+                  </div>
+                  <div className="compra-resumo-item">
+                    <span>Total do lote</span>
+                    <strong>{brl(resumoCompraForm.custoTotal)}</strong>
+                  </div>
+                  <div className="compra-resumo-item">
+                    <span>Custo real por kg</span>
+                    <strong>{brl(resumoCompraForm.custoRealPorKg)}</strong>
+                  </div>
+                </div>
+                <div className="acoes-celula">
+                  <button className="btn-secundario" onClick={abrirSimulador}>
+                    Recalcular
+                  </button>
+                  <button className="btn-perigo" onClick={limparCompra}>
+                    Remover custo da compra
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="simulador-dica" style={{ marginBottom: 16 }}>
+                Sem custo de compra registrado.{' '}
+                <button
+                  type="button"
+                  className="link-botao"
+                  onClick={abrirSimulador}
+                >
+                  Simular a compra
+                </button>{' '}
+                pra o lote nascer com o custo por cabeça.
+              </p>
+            )}
 
             <div className="campo">
               <label>Identificação</label>
@@ -341,6 +441,20 @@ export default function LotesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {simuladorAberto && (
+        <SimuladorCompra
+          valoresIniciais={{
+            quantidadeAnimais: form.quantidadeAnimais,
+            pesoMedioCompra: form.pesoMedioCompra ?? undefined,
+            valorKgCompra: form.valorKgCompra ?? undefined,
+            fretePorCabeca: form.fretePorCabeca ?? undefined,
+            comissaoPorCabeca: form.comissaoPorCabeca ?? undefined,
+          }}
+          onConfirmar={aplicarCompra}
+          onCancelar={() => setSimuladorAberto(false)}
+        />
       )}
 
       {paraExcluir && (

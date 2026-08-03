@@ -40,6 +40,33 @@ export class CriarLoteDto {
   @IsNumber()
   @Min(0)
   gmdEsperado?: number;
+
+  // ----- Compra (vem do simulador de aquisição) -----
+  // Todos opcionais: dá pra cadastrar lote sem passar pelo simulador. Mas peso
+  // e valor do kg andam juntos — a checagem de coerência está no service.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(5000)
+  pesoMedioCompra?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  valorKgCompra?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1000000)
+  fretePorCabeca?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1000000)
+  comissaoPorCabeca?: number;
 }
 
 export class AtualizarLoteDto {
@@ -80,6 +107,33 @@ export class AtualizarLoteDto {
   @IsNumber()
   @Min(0)
   gmdEsperado?: number;
+
+  // ----- Compra (vem do simulador de aquisição) -----
+  // Todos opcionais: dá pra cadastrar lote sem passar pelo simulador. Mas peso
+  // e valor do kg andam juntos — a checagem de coerência está no service.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(5000)
+  pesoMedioCompra?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  valorKgCompra?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1000000)
+  fretePorCabeca?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1000000)
+  comissaoPorCabeca?: number;
 }
 
 /** Troca o método de manejo do lote, fechando a fase atual no histórico e abrindo uma nova. */

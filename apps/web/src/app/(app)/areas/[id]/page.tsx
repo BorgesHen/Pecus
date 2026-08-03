@@ -16,9 +16,11 @@ import {
   type PiqueteComStatus,
 } from '@/lib/piquetes';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 export default function DetalheAreaPage() {
+  const toast = useToast();
   const params = useParams<{ id: string }>();
   const areaId = params.id;
   const { podeEditar, configEmpresa } = usePermissoes();
@@ -77,16 +79,16 @@ export default function DetalheAreaPage() {
   async function salvarParametros() {
     if (!parametros.nome) return;
     setSalvando(true);
-    setErro('');
     try {
       await atualizarArea(areaId, {
         nome: parametros.nome,
         areaHectares: parametros.areaHectares === '' ? undefined : parametros.areaHectares,
       });
       setModalParametrosAberto(false);
+      toast.sucesso('Dados da área salvos.');
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar parâmetros');
+      toast.erroDe(e, 'Erro ao salvar parâmetros');
     } finally {
       setSalvando(false);
     }
@@ -100,7 +102,6 @@ export default function DetalheAreaPage() {
   async function salvarNovoPiquete() {
     if (!formPiquete.nome) return;
     setSalvando(true);
-    setErro('');
     try {
       await criarPiquete({
         areaId,
@@ -109,9 +110,10 @@ export default function DetalheAreaPage() {
         alturaIdealCm: formPiquete.alturaIdealCm === '' ? undefined : formPiquete.alturaIdealCm,
       });
       setModalNovoPiqueteAberto(false);
+      toast.sucesso(`Piquete "${formPiquete.nome}" criado.`);
       carregarPiquetes();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar piquete');
+      toast.erroDe(e, 'Erro ao salvar piquete');
     } finally {
       setSalvando(false);
     }
@@ -126,17 +128,18 @@ export default function DetalheAreaPage() {
   async function salvarAltura() {
     if (!modalAlturaAberto || alturaCm === '') return;
     setSalvando(true);
-    setErro('');
     try {
       await registrarAlturaPasto(modalAlturaAberto.id, { data: dataAltura, alturaCm: Number(alturaCm) });
       const piqueteId = modalAlturaAberto.id;
+      const nomePiquete = modalAlturaAberto.nome;
       setModalAlturaAberto(null);
+      toast.sucesso(`Altura de ${alturaCm} cm registrada no piquete "${nomePiquete}".`);
       carregarPiquetes();
       if (historicoAlturaAberto === piqueteId) {
         listarAlturasPasto(piqueteId).then(setHistoricoAltura).catch(() => {});
       }
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao registrar altura');
+      toast.erroDe(e, 'Erro ao registrar altura');
     } finally {
       setSalvando(false);
     }
@@ -149,14 +152,15 @@ export default function DetalheAreaPage() {
 
   async function confirmarMoverGado() {
     if (!modalMoverAberto) return;
+    const destino = modalMoverAberto.nome;
     setSalvando(true);
-    setErro('');
     try {
       await moverGadoParaPiquete(modalMoverAberto.id, { data: dataMovimento });
       setModalMoverAberto(null);
+      toast.sucesso(`Gado movido para o piquete "${destino}".`);
       carregarPiquetes();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao mover o gado');
+      toast.erroDe(e, 'Erro ao mover o gado');
     } finally {
       setSalvando(false);
     }
@@ -174,12 +178,14 @@ export default function DetalheAreaPage() {
 
   async function confirmarExclusaoPiquete() {
     if (!paraExcluirPiquete) return;
+    const nome = paraExcluirPiquete.nome;
     try {
       await removerPiquete(paraExcluirPiquete.id);
       if (historicoAlturaAberto === paraExcluirPiquete.id) setHistoricoAlturaAberto(null);
+      toast.sucesso(`Piquete "${nome}" excluído.`);
       carregarPiquetes();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir piquete');
+      toast.erroDe(e, 'Erro ao excluir piquete');
     } finally {
       setParaExcluirPiquete(null);
     }

@@ -16,12 +16,14 @@ import {
 } from '@/lib/financeiro';
 import type { ContaBancaria, Contato } from '@pecus/shared';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const BANCO_VAZIO: NovaContaBancaria = { nome: '', saldoInicial: 0 };
 const CONTATO_VAZIO: NovoContato = { tipo: TipoContato.FORNECEDOR, nome: '' };
 
 export default function ContatosBancosPage() {
+  const toast = useToast();
   const { podeEditar } = usePermissoes();
   const podeEditarFinanceiro = podeEditar(ModuloSistema.FINANCEIRO);
 
@@ -53,29 +55,33 @@ export default function ContatosBancosPage() {
     try {
       await criarBanco(novoBanco);
       setModalBancoAberto(false);
+      toast.sucesso(`Banco "${novoBanco.nome}" cadastrado.`);
       setNovoBanco(BANCO_VAZIO);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao criar banco');
+      toast.erroDe(e, 'Erro ao criar banco');
     }
   }
 
   async function alternarAtivoBanco(banco: ContaBancaria) {
     try {
       await atualizarBanco(banco.id, { ativo: !banco.ativo });
+      toast.sucesso(banco.ativo ? `Banco "${banco.nome}" desativado.` : `Banco "${banco.nome}" reativado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao atualizar banco');
+      toast.erroDe(e, 'Erro ao atualizar banco');
     }
   }
 
   async function confirmarExclusaoBanco() {
     if (!paraExcluirBanco) return;
+    const nome = paraExcluirBanco.nome;
     try {
       await removerBanco(paraExcluirBanco.id);
+      toast.sucesso(`Banco "${nome}" excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir banco');
+      toast.erroDe(e, 'Erro ao excluir banco');
     } finally {
       setParaExcluirBanco(null);
     }
@@ -85,20 +91,23 @@ export default function ContatosBancosPage() {
     try {
       await criarContato(novoContato);
       setModalContatoAberto(false);
+      toast.sucesso(`Contato "${novoContato.nome}" cadastrado.`);
       setNovoContato(CONTATO_VAZIO);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao criar contato');
+      toast.erroDe(e, 'Erro ao criar contato');
     }
   }
 
   async function confirmarExclusaoContato() {
     if (!paraExcluirContato) return;
+    const nome = paraExcluirContato.nome;
     try {
       await removerContato(paraExcluirContato.id);
+      toast.sucesso(`Contato "${nome}" excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir contato');
+      toast.erroDe(e, 'Erro ao excluir contato');
     } finally {
       setParaExcluirContato(null);
     }

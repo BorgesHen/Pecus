@@ -258,6 +258,18 @@ model Lote {
   pesoMedioEntrada  Float?   // kg
   /// % que vira carcaça. Se nulo, usa o padrão da espécie (bovino 52, ovino 45).
   rendimentoCarcaca Float?
+
+  // ----- Dados da compra (simulador de aquisição) -----
+  // Servem duas vezes: pra decidir se o negócio fecha, antes do lote existir, e
+  // depois como base do custo do lote. `pesoMedioCompra` é separado de
+  // `pesoMedioEntrada` de propósito — o peso negociado na compra e o peso quando
+  // o gado entra na pastagem são eventos diferentes (a planilha do produtor tem
+  // as duas colunas), então corrigir um não pode mexer no custo do outro.
+  // Frete e comissão ficam sempre por cabeça (rateados), como na planilha.
+  pesoMedioCompra   Float?   // kg
+  valorKgCompra     Float?   // R$/kg negociado
+  fretePorCabeca    Float?   // R$
+  comissaoPorCabeca Float?   // R$
   gmdEsperado       Float?   // kg/dia — meta de referência p/ comparar com o GMD real
   createdAt         DateTime @default(now())
 

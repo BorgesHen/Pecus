@@ -39,7 +39,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next-claude/types/**/*.ts"
+    ".next-claude/types/**/*.ts",
+    ".next-semdist/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

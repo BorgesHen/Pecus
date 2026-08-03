@@ -11,6 +11,7 @@ import {
   type NovoInsumo,
 } from '@/lib/insumos';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoInsumo = { nome: '', unidade: 'kg', estoqueMinimo: undefined };
@@ -34,6 +35,7 @@ const MOVIMENTO = {
 } satisfies Record<TipoMovimento, unknown>;
 
 export default function InsumosPage() {
+  const toast = useToast();
   const { podeEditar, campoAtivo } = usePermissoes();
   const podeEditarEstoque = podeEditar(ModuloSistema.ESTOQUE);
 
@@ -67,13 +69,13 @@ export default function InsumosPage() {
 
   async function salvarInsumo() {
     setSalvando(true);
-    setErro('');
     try {
       await criarInsumo(form);
       setModalNovoAberto(false);
+      toast.sucesso(`Insumo "${form.nome}" cadastrado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar insumo');
+      toast.erroDe(e, 'Erro ao salvar insumo');
     } finally {
       setSalvando(false);
     }
@@ -88,19 +90,24 @@ export default function InsumosPage() {
 
   async function salvarMovimento() {
     if (!movimento || quantidade === '') return;
+    const { insumo, tipo } = movimento;
     setSalvando(true);
-    setErro('');
     try {
-      await MOVIMENTO[movimento.tipo].salvar(movimento.insumo.id, {
+      await MOVIMENTO[tipo].salvar(insumo.id, {
         quantidade: Number(quantidade),
         data: dataMovimento,
         observacao: observacao.trim() || undefined,
       });
       setMovimento(null);
+      // Frases separadas por causa da concordância: "entrada registrada", "consumo registrado".
+      toast.sucesso(
+        tipo === 'ENTRADA'
+          ? `Entrada de ${quantidade} ${insumo.unidade} em "${insumo.nome}" registrada.`
+          : `Consumo de ${quantidade} ${insumo.unidade} em "${insumo.nome}" registrado.`,
+      );
       carregar();
     } catch (e) {
-      const acao = movimento.tipo === 'ENTRADA' ? 'a entrada' : 'o consumo';
-      setErro(e instanceof Error ? e.message : `Erro ao registrar ${acao}`);
+      toast.erroDe(e, `Erro ao registrar ${tipo === 'ENTRADA' ? 'a entrada' : 'o consumo'}`);
     } finally {
       setSalvando(false);
     }

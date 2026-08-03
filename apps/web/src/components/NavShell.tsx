@@ -40,6 +40,7 @@ import {
 import { logout, trocarEmpresa } from '@/lib/auth';
 import { listarMinhasEmpresas } from '@/lib/empresas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 interface ItemNav {
   href: string;
@@ -142,6 +143,7 @@ export function NavShell({
   >(null);
   const pathname = usePathname();
   const router = useRouter();
+  const toast = useToast();
   const { podeAcessar, configEmpresa } = usePermissoes();
 
   useEffect(() => {
@@ -228,7 +230,9 @@ export function NavShell({
     try {
       await trocarEmpresa(empresaId);
       window.location.href = '/dashboard';
-    } catch {
+    } catch (e) {
+      // Antes falhava em silêncio: o select voltava e ninguém sabia o motivo.
+      toast.erroDe(e, 'Não foi possível trocar de fazenda.');
       setTrocando(false);
     }
   }

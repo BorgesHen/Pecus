@@ -11,6 +11,7 @@ import {
 } from '@pecus/shared';
 import { obterConfiguracaoEmpresa, atualizarConfiguracaoEmpresa } from '@/lib/empresas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.LOTES]: 'Cadastro de lotes de gado, ganho de peso e método de manejo.',
@@ -25,11 +26,29 @@ const DESCRICAO_MODULO: Partial<Record<ModuloSistema, string>> = {
   [ModuloSistema.FINANCEIRO]: 'Plano de contas, contas a pagar/receber, bancos e contatos.',
 };
 
+/**
+ * O GET devolve a configuração inteira, mas o PATCH só aceita o que o
+ * responsável pode editar — e recusa o resto com "property ... should not
+ * exist" (validação com forbidNonWhitelisted). Recursos personalizados são
+ * exclusivos do ADMIN, na tela própria; a localização do clima é editada no
+ * card de previsão. Mandar tudo de volta fazia o Salvar falhar.
+ */
+function somenteEditavel(config: ConfiguracaoEmpresa): Partial<ConfiguracaoEmpresa> {
+  const {
+    recursosPersonalizados: _recursos,
+    climaLocalNome: _nome,
+    climaLatitude: _lat,
+    climaLongitude: _lon,
+    ...editavel
+  } = config;
+  return editavel;
+}
+
 export default function ConfiguracoesPage() {
+  const toast = useToast();
   const { definirConfigEmpresa } = usePermissoes();
   const [config, setConfig] = useState<ConfiguracaoEmpresa | null>(null);
   const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -58,15 +77,13 @@ export default function ConfiguracoesPage() {
   async function salvar() {
     if (!config) return;
     setSalvando(true);
-    setErro('');
-    setSucesso(false);
     try {
-      const atualizado = await atualizarConfiguracaoEmpresa(config);
+      const atualizado = await atualizarConfiguracaoEmpresa(somenteEditavel(config));
       setConfig(atualizado);
       definirConfigEmpresa(atualizado);
-      setSucesso(true);
+      toast.sucesso('Configurações da fazenda salvas.');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar configurações');
+      toast.erroDe(e, 'Erro ao salvar configurações');
     } finally {
       setSalvando(false);
     }
@@ -87,12 +104,6 @@ export default function ConfiguracoesPage() {
       </p>
 
       {erro && <div className="erro">{erro}</div>}
-      {sucesso && (
-        <p style={{ color: 'var(--verde)', marginBottom: 16, fontSize: 14 }}>
-          Configurações salvas.
-        </p>
-      )}
-
       {!config && !erro && <p>Carregando...</p>}
 
       {config && (

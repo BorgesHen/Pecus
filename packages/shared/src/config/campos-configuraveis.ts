@@ -36,7 +36,10 @@ export const TELAS_CAMPOS_CONFIGURAVEIS: Record<string, TelaCamposConfiguravel> 
   animais: {
     label: 'Animais',
     campos: [
-      campo('animais', 'dataNascimento', 'Data de nascimento'),
+      // A chave segue 'dataNascimento' de propósito: é o que está gravado em
+      // Empresa.camposDesativados de quem já desligou o campo. O rótulo mudou
+      // porque a tela agora pede idade e deriva a data.
+      campo('animais', 'dataNascimento', 'Idade / data de nascimento'),
       campo('animais', 'pesoEntrada', 'Peso de entrada'),
       campo('animais', 'observacao', 'Observação'),
     ],

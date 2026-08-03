@@ -13,6 +13,7 @@ import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
 import type { Gasto } from '@pecus/shared';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
@@ -28,6 +29,7 @@ const FORM_VAZIO: NovoGasto = {
 };
 
 export default function GastosPage() {
+  const toast = useToast();
   const { podeEditar, campoAtivo } = usePermissoes();
   const podeEditarGastos = podeEditar(ModuloSistema.GASTOS);
   const [gastos, setGastos] = useState<Gasto[] | null>(null);
@@ -86,13 +88,13 @@ export default function GastosPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       await criarGasto(form);
       setModalAberto(false);
+      toast.sucesso(`Gasto de ${brl(form.valor)} lançado em "${form.categoria}".`);
       carregar(filtroLoteId);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar gasto');
+      toast.erroDe(e, 'Erro ao salvar gasto');
     } finally {
       setSalvando(false);
     }
@@ -100,11 +102,13 @@ export default function GastosPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const excluido = paraExcluir;
     try {
-      await removerGasto(paraExcluir.id);
+      await removerGasto(excluido.id);
+      toast.sucesso(`Gasto de ${brl(excluido.valor)} excluído.`);
       carregar(filtroLoteId);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir gasto');
+      toast.erroDe(e, 'Erro ao excluir gasto');
     } finally {
       setParaExcluir(null);
     }

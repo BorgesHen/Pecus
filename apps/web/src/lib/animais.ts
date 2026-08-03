@@ -11,7 +11,8 @@ export interface NovoAnimal {
   sexo: Animal['sexo'];
   categoria: Animal['categoria'];
   dataEntrada: string;
-  dataNascimento?: string;
+  /** Idade em meses na entrada — o backend deriva a data de nascimento. */
+  idadeMeses?: number;
   pesoEntrada?: number;
   observacao?: string;
 }

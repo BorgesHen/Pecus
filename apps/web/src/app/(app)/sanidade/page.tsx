@@ -21,6 +21,7 @@ import {
 import { listarAnimais, type AnimalComLote } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
 
 type Alvo = 'animal' | 'lote';
@@ -39,6 +40,7 @@ const FORM_VAZIO = {
 };
 
 export default function SanidadePage() {
+  const toast = useToast();
   const { podeEditar, campoAtivo, configEmpresa, temRecurso } = usePermissoes();
   const podeEditarSanidade = podeEditar(ModuloSistema.SANIDADE);
   const temOvinos = temRecurso(RECURSO_OVINOS);
@@ -51,7 +53,6 @@ export default function SanidadePage() {
   const [famacha, setFamacha] = useState<AlertaFamacha | null>(null);
   const [animais, setAnimais] = useState<AnimalComLote[]>([]);
   const [lotes, setLotes] = useState<LoteComContagem[]>([]);
-  const [erro, setErro] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -59,9 +60,28 @@ export default function SanidadePage() {
   const avisoAtivo = configEmpresa?.avisoVencimentoSanitarioAtivo ?? true;
 
   function carregar() {
-    proximosVencimentos().then(setVencimentos).catch(() => setVencimentos(null));
-    historicoSanitario(20).then(setHistorico).catch(() => setHistorico(null));
-    if (temOvinos) alertaFamacha().then(setFamacha).catch(() => setFamacha(null));
+    // Antes essas falhas eram totalmente silenciosas: a tela ficava vazia sem
+    // dizer por quê. Agora avisam, mesmo sem bloquear o resto da tela.
+    proximosVencimentos()
+      .then(setVencimentos)
+      .catch((e) => {
+        setVencimentos(null);
+        toast.erroDe(e, 'Erro ao carregar vencimentos sanitários');
+      });
+    historicoSanitario(20)
+      .then(setHistorico)
+      .catch((e) => {
+        setHistorico(null);
+        toast.erroDe(e, 'Erro ao carregar o histórico sanitário');
+      });
+    if (temOvinos) {
+      alertaFamacha()
+        .then(setFamacha)
+        .catch((e) => {
+          setFamacha(null);
+          toast.erroDe(e, 'Erro ao carregar o alerta FAMACHA');
+        });
+    }
   }
 
   useEffect(() => {
@@ -77,7 +97,6 @@ export default function SanidadePage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       const campos = {
         tipo: form.tipo,
@@ -99,9 +118,15 @@ export default function SanidadePage() {
         await aplicarEmMassa({ ...campos, loteId: form.loteId });
       }
       setModalAberto(false);
+      const rotulo = LABEL_TIPO_EVENTO_SANITARIO[form.tipo];
+      toast.sucesso(
+        form.alvo === 'animal'
+          ? `${rotulo} "${form.nome}" registrada no animal.`
+          : `${rotulo} "${form.nome}" aplicada em todo o lote.`,
+      );
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar evento sanitário');
+      toast.erroDe(e, 'Erro ao salvar evento sanitário');
     } finally {
       setSalvando(false);
     }
@@ -121,8 +146,6 @@ export default function SanidadePage() {
           + Novo evento
         </button>
       </div>
-
-      {erro && <div className="erro">{erro}</div>}
 
       {avisoAtivo ? (
         <div className="grid-cards" style={{ marginBottom: 24 }}>

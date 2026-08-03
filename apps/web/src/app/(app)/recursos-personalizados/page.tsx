@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { RECURSOS_PERSONALIZADOS, type Empresa } from '@pecus/shared';
 import { listarMinhasEmpresas, atualizarRecursosPersonalizados } from '@/lib/empresas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function RecursosPersonalizadosPage() {
+  const toast = useToast();
   const { recarregarConfigEmpresa } = usePermissoes();
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [erro, setErro] = useState('');
   const [salvandoId, setSalvandoId] = useState('');
-  const [salvoId, setSalvoId] = useState('');
 
   function carregar() {
     listarMinhasEmpresas()
@@ -33,17 +34,14 @@ export default function RecursosPersonalizadosPage() {
 
   async function salvar(empresa: Empresa) {
     setSalvandoId(empresa.id);
-    setErro('');
-    setSalvoId('');
     try {
       await atualizarRecursosPersonalizados(empresa.id, empresa.recursosPersonalizados);
       // Propaga pro resto do app (menu e campos das telas) sem exigir F5. Se a
       // fazenda editada não for a ativa, isso só reconfirma a configuração atual.
       await recarregarConfigEmpresa();
-      setSalvoId(empresa.id);
-      setTimeout(() => setSalvoId(''), 3000);
+      toast.sucesso(`Recursos de "${empresa.nome}" salvos.`);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar');
+      toast.erroDe(e, 'Erro ao salvar os recursos');
     } finally {
       setSalvandoId('');
     }
@@ -86,9 +84,6 @@ export default function RecursosPersonalizadosPage() {
             <div className="topo-tela" style={{ marginBottom: 12 }}>
               <strong>{empresa.nome}</strong>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {salvoId === empresa.id && (
-                  <span style={{ color: 'var(--verde)', fontSize: 14 }}>Salvo ✓</span>
-                )}
                 <button
                   className="btn-secundario"
                   onClick={() => salvar(empresa)}

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { TipoMetodoManejo, LABEL_TIPO_METODO_MANEJO, type MetodoManejo } from '@pecus/shared';
 import { listarMetodosManejo, criarMetodoManejo, removerMetodoManejo } from '@/lib/lotes';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function MetodosManejoPage() {
+  const toast = useToast();
   const [metodos, setMetodos] = useState<MetodoManejo[] | null>(null);
   const [erro, setErro] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -32,13 +34,13 @@ export default function MetodosManejoPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
-      await criarMetodoManejo(nome, tipo);
+      await criarMetodoManejo(nome.trim(), tipo);
       setModalAberto(false);
+      toast.sucesso(`Método "${nome.trim()}" criado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar método');
+      toast.erroDe(e, 'Erro ao salvar método');
     } finally {
       setSalvando(false);
     }
@@ -46,11 +48,13 @@ export default function MetodosManejoPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const nomeExcluido = paraExcluir.nome;
     try {
       await removerMetodoManejo(paraExcluir.id);
+      toast.sucesso(`Método "${nomeExcluido}" excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir método');
+      toast.erroDe(e, 'Erro ao excluir método');
     } finally {
       setParaExcluir(null);
     }
@@ -114,7 +118,12 @@ export default function MetodosManejoPage() {
 
             <div className="campo">
               <label>Nome</label>
-              <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
+              <input
+                className="input"
+                value={nome}
+                maxLength={60}
+                onChange={(e) => setNome(e.target.value)}
+              />
             </div>
 
             <div className="campo">
@@ -136,7 +145,7 @@ export default function MetodosManejoPage() {
               <button className="btn-secundario" onClick={() => setModalAberto(false)}>
                 Cancelar
               </button>
-              <button className="btn" onClick={salvar} disabled={salvando || !nome}>
+              <button className="btn" onClick={salvar} disabled={salvando || !nome.trim()}>
                 {salvando ? 'Salvando...' : 'Salvar'}
               </button>
             </div>

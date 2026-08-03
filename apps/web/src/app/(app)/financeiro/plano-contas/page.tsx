@@ -13,9 +13,11 @@ import {
   type GrupoComContas,
 } from '@/lib/financeiro';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 export default function PlanoContasPage() {
+  const toast = useToast();
   const { podeEditar } = usePermissoes();
   const podeEditarFinanceiro = podeEditar(ModuloSistema.FINANCEIRO);
 
@@ -45,10 +47,11 @@ export default function PlanoContasPage() {
     try {
       await criarGrupoFinanceiro(novoGrupo);
       setModalGrupoAberto(false);
+      toast.sucesso(`Grupo "${novoGrupo.nome}" criado.`);
       setNovoGrupo({ natureza: NaturezaFinanceira.DESPESA, codigo: '', nome: '' });
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao criar grupo');
+      toast.erroDe(e, 'Erro ao criar grupo');
     }
   }
 
@@ -57,29 +60,33 @@ export default function PlanoContasPage() {
     try {
       await criarContaFinanceira({ grupoId: grupoParaConta.id, ...novaConta });
       setGrupoParaConta(null);
+      toast.sucesso(`Conta "${novaConta.nome}" criada.`);
       setNovaConta({ codigo: '', nome: '' });
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao criar conta');
+      toast.erroDe(e, 'Erro ao criar conta');
     }
   }
 
   async function alternarAtivo(contaId: string, ativo: boolean) {
     try {
       await atualizarContaFinanceira(contaId, { ativo: !ativo });
+      toast.sucesso(ativo ? 'Conta desativada.' : 'Conta reativada.');
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao atualizar conta');
+      toast.erroDe(e, 'Erro ao atualizar conta');
     }
   }
 
   async function confirmarExclusaoGrupo() {
     if (!paraExcluirGrupo) return;
+    const nome = paraExcluirGrupo.nome;
     try {
       await removerGrupoFinanceiro(paraExcluirGrupo.id);
+      toast.sucesso(`Grupo "${nome}" excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir grupo');
+      toast.erroDe(e, 'Erro ao excluir grupo');
     } finally {
       setParaExcluirGrupo(null);
     }
@@ -87,11 +94,13 @@ export default function PlanoContasPage() {
 
   async function confirmarExclusaoConta() {
     if (!paraExcluirConta) return;
+    const nome = paraExcluirConta.nome;
     try {
       await removerContaFinanceira(paraExcluirConta.id);
+      toast.sucesso(`Conta "${nome}" excluída.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir conta');
+      toast.erroDe(e, 'Erro ao excluir conta');
     } finally {
       setParaExcluirConta(null);
     }

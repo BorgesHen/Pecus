@@ -7,9 +7,11 @@ import { registrar } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 import { PopupErro } from '@/components/PopupErro';
 import { CampoSenha } from '@/components/CampoSenha';
+import { useToast } from '@/contexts/ToastContext';
 
 function CadastroForm() {
   const router = useRouter();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const [form, setForm] = useState({
     codigoConvite: searchParams.get('convite') ?? '',
@@ -19,7 +21,6 @@ function CadastroForm() {
     senha: '',
     nomeEmpresa: '',
   });
-  const [erro, setErro] = useState('');
   const [erroDuplicidade, setErroDuplicidade] = useState('');
   const [carregando, setCarregando] = useState(false);
 
@@ -28,16 +29,17 @@ function CadastroForm() {
   }
 
   async function cadastrar() {
-    setErro('');
     setCarregando(true);
     try {
       await registrar(form);
+      toast.sucesso(`Fazenda "${form.nomeEmpresa}" criada. Bem-vindo(a) ao Pecus!`);
       router.push('/dashboard');
     } catch (e) {
+      // Duplicidade segue no popup: exige corrigir usuário/e-mail antes de repetir.
       if (e instanceof ApiError && e.status === 409) {
         setErroDuplicidade(e.message);
       } else {
-        setErro(e instanceof Error ? e.message : 'Falha ao cadastrar');
+        toast.erroDe(e, 'Falha ao cadastrar');
       }
     } finally {
       setCarregando(false);
@@ -53,7 +55,6 @@ function CadastroForm() {
           Você será o responsável e poderá convidar outros usuários depois
         </p>
 
-        {erro && <div className="erro">{erro}</div>}
 
         <div className="campo">
           <label>Código de convite</label>

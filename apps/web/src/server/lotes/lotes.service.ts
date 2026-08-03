@@ -22,6 +22,27 @@ async function garantirEspecieLiberada(empresaId: string, especie?: EspecieAnima
   }
 }
 
+/**
+ * Peso e valor do kg andam juntos: sem os dois não existe custo por cabeça, e
+ * guardar só um deixaria o lote com uma compra pela metade que nenhum cálculo
+ * consegue usar. Frete e comissão são opcionais (podem ser zero) mas só fazem
+ * sentido acompanhados da base.
+ */
+function garantirCompraCoerente(dto: { pesoMedioCompra?: number; valorKgCompra?: number; fretePorCabeca?: number; comissaoPorCabeca?: number }) {
+  const temBase = dto.pesoMedioCompra != null && dto.valorKgCompra != null;
+  const informouAlgo =
+    dto.pesoMedioCompra != null ||
+    dto.valorKgCompra != null ||
+    dto.fretePorCabeca != null ||
+    dto.comissaoPorCabeca != null;
+
+  if (!informouAlgo || temBase) return;
+
+  throw new BadRequestException(
+    'Para registrar a compra do lote informe o peso médio e o valor do kg juntos.',
+  );
+}
+
 export function listar(empresaId: string) {
   return prisma.lote.findMany({
     where: { empresaId },
@@ -50,6 +71,7 @@ export async function criar(empresaId: string, dtoOriginal: CriarLoteDto) {
   const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
   if (dto.areaId) await garantirAreaDaEmpresa(empresaId, dto.areaId);
   await garantirEspecieLiberada(empresaId, dto.especie);
+  garantirCompraCoerente(dto);
   const dataAquisicao = new Date(dto.dataAquisicao);
   return prisma.$transaction(async (tx) => {
     const lote = await tx.lote.create({
@@ -64,6 +86,10 @@ export async function criar(empresaId: string, dtoOriginal: CriarLoteDto) {
         areaId: dto.areaId,
         rendimentoCarcaca: dto.rendimentoCarcaca,
         gmdEsperado: dto.gmdEsperado,
+        pesoMedioCompra: dto.pesoMedioCompra,
+        valorKgCompra: dto.valorKgCompra,
+        fretePorCabeca: dto.fretePorCabeca,
+        comissaoPorCabeca: dto.comissaoPorCabeca,
       },
     });
 
@@ -82,6 +108,7 @@ export async function atualizar(empresaId: string, id: string, dtoOriginal: Atua
   const camposDesativados = await obterCamposDesativados(empresaId);
   const dto = removerCamposDesativados(dtoOriginal, 'lotes', camposDesativados);
   if (dto.areaId) await garantirAreaDaEmpresa(empresaId, dto.areaId);
+  garantirCompraCoerente(dto);
 
   // Trocar a espécie depois de cadastrar animais deixaria as categorias deles
   // inválidas (ex: "Bezerro" num lote que virou ovino), então só permite

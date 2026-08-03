@@ -1,5 +1,5 @@
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-import { SexoAnimal, CategoriaAnimal, StatusAnimal } from '@pecus/shared';
+import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { SexoAnimal, CategoriaAnimal, StatusAnimal, IDADE_MAXIMA_MESES } from '@pecus/shared';
 
 export class CriarAnimalDto {
   @IsString()
@@ -17,9 +17,16 @@ export class CriarAnimalDto {
   @IsDateString()
   dataEntrada: string;
 
+  /**
+   * Idade em meses na data de entrada. A data de nascimento é derivada daqui no
+   * service — ver idade-animal.ts pra o porquê de não guardar a idade crua.
+   * A tela oferece meses/anos, mas converte pra meses antes de enviar.
+   */
   @IsOptional()
-  @IsDateString()
-  dataNascimento?: string;
+  @IsInt()
+  @Min(0)
+  @Max(IDADE_MAXIMA_MESES)
+  idadeMeses?: number;
 
   @IsOptional()
   @IsNumber()
@@ -47,9 +54,12 @@ export class AtualizarAnimalDto {
   @IsEnum(CategoriaAnimal)
   categoria?: CategoriaAnimal;
 
+  /** Idade em meses; recalculada contra a data de entrada já gravada do animal. */
   @IsOptional()
-  @IsDateString()
-  dataNascimento?: string;
+  @IsInt()
+  @Min(0)
+  @Max(IDADE_MAXIMA_MESES)
+  idadeMeses?: number;
 
   @IsOptional()
   @IsNumber()

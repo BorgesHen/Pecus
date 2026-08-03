@@ -6,6 +6,7 @@ import { PapelUsuario } from '@pecus/shared';
 import { buscarLocais, obterPrevisao, type LocalClima, type PrevisaoDia } from '@/lib/clima';
 import { atualizarConfiguracaoEmpresa } from '@/lib/empresas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 /** De onde vem a coordenada da previsão. */
 type Origem = 'fazenda' | 'atual';
@@ -18,6 +19,7 @@ function rotuloCurto(nome: string) {
 }
 
 export function PrevisaoTempo() {
+  const toast = useToast();
   const { configEmpresa, definirConfigEmpresa, permissoes } = usePermissoes();
 
   const latFazenda = configEmpresa?.climaLatitude ?? null;
@@ -141,7 +143,10 @@ export function PrevisaoTempo() {
       localStorage.setItem(CHAVE_ORIGEM, 'fazenda');
       setOrigem('fazenda');
       setEditando(false);
+      toast.sucesso(`Previsão da fazenda agora é de ${local.nome}.`);
     } catch (e) {
+      // Fica no painel do editor (e não em toast) porque o erro é do formulário
+      // que está aberto ali — o usuário precisa dele junto do campo.
       setErroEditor(e instanceof Error ? e.message : 'Erro ao salvar a localização');
     } finally {
       setSalvandoLocal(false);
@@ -161,6 +166,7 @@ export function PrevisaoTempo() {
       localStorage.setItem(CHAVE_ORIGEM, 'atual');
       setOrigem('atual');
       setEditando(false);
+      toast.sucesso('Localização da fazenda removida.');
     } catch (e) {
       setErroEditor(e instanceof Error ? e.message : 'Erro ao remover a localização');
     } finally {

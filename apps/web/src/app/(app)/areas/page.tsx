@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { ModuloSistema } from '@pecus/shared';
 import { listarAreas, criarArea, removerArea, type AreaComContagem, type NovaArea } from '@/lib/areas';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const FORM_VAZIO: NovaArea = { nome: '', areaHectares: undefined };
 
 export default function AreasPage() {
   const router = useRouter();
+  const toast = useToast();
   const { podeEditar } = usePermissoes();
   const podeEditarAreas = podeEditar(ModuloSistema.AREAS);
   const [areas, setAreas] = useState<AreaComContagem[] | null>(null);
@@ -38,13 +40,13 @@ export default function AreasPage() {
   async function salvar() {
     if (!form.nome) return;
     setSalvando(true);
-    setErro('');
     try {
       await criarArea(form);
       setModalAberto(false);
+      toast.sucesso(`Área "${form.nome}" cadastrada.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar área');
+      toast.erroDe(e, 'Erro ao salvar área');
     } finally {
       setSalvando(false);
     }
@@ -57,11 +59,13 @@ export default function AreasPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const nome = paraExcluir.nome;
     try {
       await removerArea(paraExcluir.id);
+      toast.sucesso(`Área "${nome}" excluída.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir área');
+      toast.erroDe(e, 'Erro ao excluir área');
     } finally {
       setParaExcluir(null);
     }

@@ -14,11 +14,18 @@ import {
   LABEL_ESPECIE_ANIMAL,
   CATEGORIAS_POR_ESPECIE,
   RECURSO_OVINOS,
+  IDADE_MAXIMA_MESES,
+  LABEL_UNIDADE_IDADE,
+  MESES_POR_UNIDADE,
+  dataNascimentoPorIdade,
+  idadeDoAnimal,
+  type UnidadeIdade,
 } from '@pecus/shared';
 import { listarAnimais, criarAnimal, type AnimalComLote, type NovoAnimal } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 
 const FORM_VAZIO: NovoAnimal = {
   loteId: '',
@@ -26,13 +33,14 @@ const FORM_VAZIO: NovoAnimal = {
   sexo: SexoAnimal.FEMEA,
   categoria: CategoriaAnimal.BEZERRO,
   dataEntrada: new Date().toISOString().slice(0, 10),
-  dataNascimento: undefined,
+  idadeMeses: undefined,
   pesoEntrada: undefined,
   observacao: '',
 };
 
 export default function AnimaisPage() {
   const router = useRouter();
+  const toast = useToast();
   const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarAnimais = podeEditar(ModuloSistema.ANIMAIS);
   const temOvinos = temRecurso(RECURSO_OVINOS);
@@ -45,6 +53,8 @@ export default function AnimaisPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState<NovoAnimal>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
+  // Meses/anos é conveniência de digitação: o que vai pro backend é sempre mês.
+  const [unidadeIdade, setUnidadeIdade] = useState<UnidadeIdade>('MESES');
 
   function carregar() {
     listarAnimais({ loteId: filtroLoteId || undefined, status: filtroStatus || undefined })
@@ -72,6 +82,7 @@ export default function AnimaisPage() {
   const categoriasDisponiveis = CATEGORIAS_POR_ESPECIE[especieForm];
 
   function abrirModal() {
+    setUnidadeIdade('MESES');
     const loteId = filtroLoteId || lotes[0]?.id || '';
     setForm({
       ...FORM_VAZIO,
@@ -93,19 +104,50 @@ export default function AnimaisPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       await criarAnimal(form);
       setModalAberto(false);
+      toast.sucesso(`Animal "${form.identificador}" cadastrado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar animal');
+      toast.erroDe(e, 'Erro ao salvar animal');
     } finally {
       setSalvando(false);
     }
   }
 
-  const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
+  const hoje = hojeISO();
+
+  // A idade é guardada em meses; o campo mostra na unidade escolhida.
+  const idadeDigitada =
+    form.idadeMeses == null
+      ? ''
+      : String(unidadeIdade === 'ANOS' ? Math.floor(form.idadeMeses / 12) : form.idadeMeses);
+
+  const nascimentoEstimado =
+    form.idadeMeses != null ? dataNascimentoPorIdade(form.dataEntrada, form.idadeMeses) : null;
+
+  function mudarIdade(texto: string) {
+    const digitos = texto.replace(/\D/g, '');
+    if (!digitos) {
+      setForm((f) => ({ ...f, idadeMeses: undefined }));
+      return;
+    }
+    const emMeses = Number(digitos) * MESES_POR_UNIDADE[unidadeIdade];
+    setForm((f) => ({ ...f, idadeMeses: Math.min(emMeses, IDADE_MAXIMA_MESES) }));
+  }
+
+  /** Trocar a unidade reinterpreta o número digitado, não converte o valor. */
+  function trocarUnidadeIdade(nova: UnidadeIdade) {
+    const digitado = Number(idadeDigitada || 0);
+    setUnidadeIdade(nova);
+    setForm((f) => ({
+      ...f,
+      idadeMeses:
+        digitado > 0 ? Math.min(digitado * MESES_POR_UNIDADE[nova], IDADE_MAXIMA_MESES) : f.idadeMeses,
+    }));
+  }
+
 
   return (
     <div className="container">
@@ -172,6 +214,7 @@ export default function AnimaisPage() {
                 {temOvinos && <th>Espécie</th>}
                 <th>Categoria</th>
                 <th>Sexo</th>
+                {campoAtivo('animais.dataNascimento') && <th>Idade</th>}
                 <th>Lote</th>
                 <th>Status</th>
                 <th>Entrada</th>
@@ -186,6 +229,9 @@ export default function AnimaisPage() {
                   {temOvinos && <td data-label="Espécie">{LABEL_ESPECIE_ANIMAL[a.especie]}</td>}
                   <td data-label="Categoria">{LABEL_CATEGORIA_ANIMAL[a.categoria]}</td>
                   <td data-label="Sexo">{LABEL_SEXO_ANIMAL[a.sexo]}</td>
+                  {campoAtivo('animais.dataNascimento') && (
+                    <td data-label="Idade">{idadeDoAnimal(a, hoje)?.texto ?? '—'}</td>
+                  )}
                   <td data-label="Lote">{a.lote?.identificacao ?? '—'}</td>
                   <td data-label="Status">{LABEL_STATUS_ANIMAL[a.status]}</td>
                   <td data-label="Entrada">{brData(a.dataEntrada)}</td>
@@ -267,14 +313,35 @@ export default function AnimaisPage() {
               </div>
               {campoAtivo('animais.dataNascimento') && (
                 <div className="campo">
-                  <label>Data de nascimento (opcional)</label>
-                  <input
-                    className="input"
-                    type="date"
-                    max={hojeISO()}
-                    value={form.dataNascimento ?? ''}
-                    onChange={(e) => setForm({ ...form, dataNascimento: e.target.value || undefined })}
-                  />
+                  <label>Idade na entrada (opcional)</label>
+                  <div className="simulador-campo-base">
+                    <input
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="0"
+                      value={idadeDigitada}
+                      onChange={(e) => mudarIdade(e.target.value)}
+                    />
+                    <select
+                      className="input"
+                      value={unidadeIdade}
+                      onChange={(e) => trocarUnidadeIdade(e.target.value as UnidadeIdade)}
+                    >
+                      {(['MESES', 'ANOS'] as UnidadeIdade[]).map((u) => (
+                        <option key={u} value={u}>
+                          {LABEL_UNIDADE_IDADE[u]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {form.idadeMeses != null && (
+                    <p className="simulador-dica">
+                      Nascimento estimado em {brData(nascimentoEstimado)} — a idade mostrada na
+                      ficha vai acompanhando o tempo.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

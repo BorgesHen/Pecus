@@ -14,6 +14,7 @@ import {
   LABEL_TIPO_EVENTO_SANITARIO,
   TipoEventoReprodutivo,
   LABEL_TIPO_EVENTO_REPRODUTIVO,
+  idadeDoAnimal,
 } from '@pecus/shared';
 import type { EventoSanitario } from '@pecus/shared';
 import { obterAnimal, darSaidaAnimal, type AnimalComLote } from '@/lib/animais';
@@ -28,9 +29,11 @@ import {
   type EventoReprodutivoComCria,
 } from '@/lib/reproducao';
 import { usePermissoes } from '@/contexts/PermissoesContext';
-import { hojeISO } from '@/lib/data';
+import { useToast } from '@/contexts/ToastContext';
+import { brData, hojeISO } from '@/lib/data';
 
 export default function DetalheAnimalPage() {
+  const toast = useToast();
   const params = useParams<{ id: string }>();
   const animalId = params.id;
   const { podeEditar, campoAtivo } = usePermissoes();
@@ -75,7 +78,7 @@ export default function DetalheAnimalPage() {
 
   async function salvarEventoReprodutivo() {
     setSalvando(true);
-    setErro('');
+    const rotulo = LABEL_TIPO_EVENTO_REPRODUTIVO[formReproducao.tipo];
     try {
       await criarEventoReprodutivo({
         animalId,
@@ -85,6 +88,7 @@ export default function DetalheAnimalPage() {
         observacao: formReproducao.observacao || undefined,
       });
       setModalReproducaoAberto(false);
+      toast.sucesso(`${rotulo} registrado neste animal.`);
       setFormReproducao({
         tipo: TipoEventoReprodutivo.DIAGNOSTICO_GESTACAO,
         data: new Date().toISOString().slice(0, 10),
@@ -93,7 +97,7 @@ export default function DetalheAnimalPage() {
       });
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar evento reprodutivo');
+      toast.erroDe(e, 'Erro ao salvar evento reprodutivo');
     } finally {
       setSalvando(false);
     }
@@ -101,7 +105,8 @@ export default function DetalheAnimalPage() {
 
   async function salvarEventoSanitario() {
     setSalvando(true);
-    setErro('');
+    const rotulo = LABEL_TIPO_EVENTO_SANITARIO[formSanidade.tipo];
+    const nomeEvento = formSanidade.nome;
     try {
       await criarEventoSanitario({
         ...formSanidade,
@@ -110,6 +115,7 @@ export default function DetalheAnimalPage() {
         observacao: formSanidade.observacao || undefined,
       });
       setModalSanidadeAberto(false);
+      toast.sucesso(`${rotulo} "${nomeEvento}" registrada neste animal.`);
       setFormSanidade({
         tipo: TipoEventoSanitario.VACINA,
         nome: '',
@@ -119,7 +125,7 @@ export default function DetalheAnimalPage() {
       });
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar evento sanitário');
+      toast.erroDe(e, 'Erro ao salvar evento sanitário');
     } finally {
       setSalvando(false);
     }
@@ -132,19 +138,19 @@ export default function DetalheAnimalPage() {
 
   async function confirmarSaida() {
     setSalvando(true);
-    setErro('');
     try {
       await darSaidaAnimal(animalId, { status: statusSaida, dataSaida, motivoSaida: motivoSaida || undefined });
       setModalSaidaAberto(false);
+      toast.sucesso(`Saída registrada: ${LABEL_STATUS_ANIMAL[statusSaida]}.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao registrar saída');
+      toast.erroDe(e, 'Erro ao registrar saída');
     } finally {
       setSalvando(false);
     }
   }
 
-  const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
+  const idade = animal ? idadeDoAnimal(animal, hojeISO()) : null;
 
   if (erro && !animal) {
     return (
@@ -206,8 +212,12 @@ export default function DetalheAnimalPage() {
 
       <div className="card" style={{ marginBottom: 24 }}>
         <p style={{ fontSize: 14 }}>
-          <strong>Nascimento:</strong> {brData(animal.dataNascimento)} &nbsp;•&nbsp;{' '}
-          <strong>Entrada:</strong> {brData(animal.dataEntrada)}
+          {/* Idade recalculada a cada abertura da ficha — o número não envelhece
+              errado como aconteceria se a idade fosse gravada como número. */}
+          <strong>Idade:</strong> {idade ? idade.texto : '—'} &nbsp;•&nbsp;{' '}
+          <strong>Nascimento:</strong> {brData(animal.dataNascimento)}
+          {animal.dataNascimento && <span style={{ color: 'var(--texto-suave)' }}> (estimado)</span>}
+          &nbsp;•&nbsp; <strong>Entrada:</strong> {brData(animal.dataEntrada)}
         </p>
         {animal.observacao && (
           <p style={{ fontSize: 14, color: 'var(--texto-suave)', marginTop: 8 }}>{animal.observacao}</p>

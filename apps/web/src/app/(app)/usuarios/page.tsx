@@ -18,6 +18,7 @@ import {
 } from '@/lib/usuarios';
 import { ApiError } from '@/lib/api';
 import { PopupErro } from '@/components/PopupErro';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const MODULOS_PERMISSAO: ModuloSistema[] = [
@@ -85,6 +86,7 @@ function resumoPermissoes(vinculo: VinculoUsuario) {
 }
 
 export default function UsuariosPage() {
+  const toast = useToast();
   const [vinculos, setVinculos] = useState<VinculoUsuario[] | null>(null);
   const [erro, setErro] = useState('');
   const [erroDuplicidade, setErroDuplicidade] = useState('');
@@ -129,7 +131,6 @@ export default function UsuariosPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       if (editando) {
         await atualizarInfoUsuario(editando.usuarioId, {
@@ -150,12 +151,15 @@ export default function UsuariosPage() {
         });
       }
       setModalAberto(false);
+      toast.sucesso(editando ? `Dados de ${form.nome} atualizados.` : `Usuário ${form.nome} criado.`);
       carregar();
     } catch (e) {
+      // Duplicidade continua no popup: é um caso que o usuário precisa reconhecer
+      // e corrigir antes de tentar de novo, não só ser avisado de passagem.
       if (e instanceof ApiError && e.status === 409) {
         setErroDuplicidade(e.message);
       } else {
-        setErro(e instanceof Error ? e.message : 'Erro ao salvar usuário');
+        toast.erroDe(e, 'Erro ao salvar usuário');
       }
     } finally {
       setSalvando(false);
@@ -164,11 +168,13 @@ export default function UsuariosPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const nome = paraExcluir.usuario.nome;
     try {
       await removerUsuario(paraExcluir.usuarioId);
+      toast.sucesso(`${nome} removido desta fazenda.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao remover usuário');
+      toast.erroDe(e, 'Erro ao remover usuário');
     } finally {
       setParaExcluir(null);
     }

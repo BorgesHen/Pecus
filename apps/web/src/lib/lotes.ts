@@ -23,7 +23,15 @@ export interface LoteDetalhado extends Lote {
   metodoHistorico: LoteMetodoHistorico[];
 }
 
-export interface NovoLote {
+/** Compra do lote — frete e comissão sempre por cabeça (ver calcularCompraLote). */
+export interface DadosCompraLoteApi {
+  pesoMedioCompra?: number;
+  valorKgCompra?: number;
+  fretePorCabeca?: number;
+  comissaoPorCabeca?: number;
+}
+
+export interface NovoLote extends DadosCompraLoteApi {
   identificacao: string;
   especie?: EspecieAnimal;
   dataAquisicao: string;
@@ -35,7 +43,9 @@ export interface NovoLote {
   gmdEsperado?: number;
 }
 
-export interface ParametrosLote {
+export interface ParametrosLote extends DadosCompraLoteApi {
+  /** O simulador de compra pode corrigir a contagem de cabeças junto do custo. */
+  quantidadeAnimais?: number;
   areaId?: string;
   rendimentoCarcaca?: number;
   gmdEsperado?: number;

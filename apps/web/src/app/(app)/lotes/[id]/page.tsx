@@ -9,6 +9,8 @@ import {
   TIPOS_METODO_A_PASTO,
   LABEL_ESPECIE_ANIMAL,
   ESPECIE_CONFIG,
+  calcularCompraLote,
+  temDadosDeCompra,
   RECURSO_OVINOS,
   type MetodoManejo,
 } from '@pecus/shared';
@@ -25,8 +27,11 @@ import { hojeISO } from '@/lib/data';
 import { indicadoresMetodo, type IndicadoresMetodo } from '@/lib/relatorios';
 import { listarAnimais } from '@/lib/animais';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
+import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
 
 export default function DetalheLotePage() {
+  const toast = useToast();
   const params = useParams<{ id: string }>();
   const loteId = params.id;
   const { podeEditar, temRecurso } = usePermissoes();
@@ -45,6 +50,7 @@ export default function DetalheLotePage() {
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [pesoMedio, setPesoMedio] = useState<number | ''>('');
   const [salvando, setSalvando] = useState(false);
+  const [simuladorAberto, setSimuladorAberto] = useState(false);
 
   const [modalParametrosAberto, setModalParametrosAberto] = useState(false);
   const [parametros, setParametros] = useState({
@@ -89,7 +95,6 @@ export default function DetalheLotePage() {
 
   async function salvarParametros() {
     setSalvando(true);
-    setErro('');
     try {
       await atualizarLote(loteId, {
         rendimentoCarcaca: parametros.rendimentoCarcaca === '' ? undefined : parametros.rendimentoCarcaca,
@@ -97,9 +102,10 @@ export default function DetalheLotePage() {
         gmdEsperado: parametros.gmdEsperado === '' ? undefined : parametros.gmdEsperado,
       });
       setModalParametrosAberto(false);
+      toast.sucesso('Parâmetros do lote salvos.');
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar parâmetros');
+      toast.erroDe(e, 'Erro ao salvar parâmetros');
     } finally {
       setSalvando(false);
     }
@@ -114,13 +120,13 @@ export default function DetalheLotePage() {
   async function confirmarTrocaMetodo() {
     if (!novoMetodoId) return;
     setSalvando(true);
-    setErro('');
     try {
       await trocarMetodoLote(loteId, { metodoManejoId: novoMetodoId, dataTroca });
       setModalTrocarMetodoAberto(false);
+      toast.sucesso('Método de manejo trocado.');
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao trocar método');
+      toast.erroDe(e, 'Erro ao trocar método');
     } finally {
       setSalvando(false);
     }
@@ -135,19 +141,48 @@ export default function DetalheLotePage() {
   async function salvar() {
     if (pesoMedio === '') return;
     setSalvando(true);
-    setErro('');
     try {
       await criarPesagem({ loteId, data, pesoMedio: Number(pesoMedio) });
       setModalAberto(false);
+      toast.sucesso(`Pesagem de ${pesoMedio} kg registrada.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar pesagem');
+      toast.erroDe(e, 'Erro ao salvar pesagem');
     } finally {
       setSalvando(false);
     }
   }
 
   const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+  const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  /** Corrigir a compra depois usa o mesmo simulador do cadastro, via PATCH. */
+  async function salvarCompra(dados: DadosCompraSimulada) {
+    setSalvando(true);
+    const mudouQuantidade = dados.quantidadeAnimais !== lote?.quantidadeAnimais;
+    try {
+      await atualizarLote(loteId, {
+        // A quantidade vai junto: o simulador mostra o total do lote em função
+        // dela, então descartá-la aqui deixaria o total exibido mentindo.
+        quantidadeAnimais: dados.quantidadeAnimais,
+        pesoMedioCompra: dados.pesoMedioCompra,
+        valorKgCompra: dados.valorKgCompra,
+        fretePorCabeca: dados.fretePorCabeca,
+        comissaoPorCabeca: dados.comissaoPorCabeca,
+      });
+      setSimuladorAberto(false);
+      toast.sucesso(
+        mudouQuantidade
+          ? `Custo da compra atualizado e lote ajustado para ${dados.quantidadeAnimais} cabeça(s).`
+          : 'Custo da compra atualizado.',
+      );
+      carregar();
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao salvar o custo da compra');
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   if (erro && !lote) {
     return (
@@ -172,6 +207,14 @@ export default function DetalheLotePage() {
   lote.pesagens.forEach((p) => pontos.push({ label: brData(p.data), peso: p.pesoMedio }));
 
   // Cordeiro ganha ~200-300 g/dia; em kg/dia o número fica ilegível (0,25).
+  const resumoCompra = calcularCompraLote({
+    pesoMedioCompra: lote.pesoMedioCompra ?? 0,
+    valorKgCompra: lote.valorKgCompra ?? 0,
+    fretePorCabeca: lote.fretePorCabeca ?? 0,
+    comissaoPorCabeca: lote.comissaoPorCabeca ?? 0,
+    quantidadeAnimais: lote.quantidadeAnimais,
+  });
+
   const gmdEmGramas = ESPECIE_CONFIG[lote.especie].gmdEmGramas;
   const formatarGmd = (kgPorDia: number) =>
     gmdEmGramas ? `${Math.round(kgPorDia * 1000)} g/dia` : `${kgPorDia} kg/dia`;
@@ -248,6 +291,56 @@ export default function DetalheLotePage() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="topo-tela" style={{ marginBottom: 12 }}>
+          <strong>Custo da compra</strong>
+          <button
+            className="btn-secundario"
+            onClick={() => setSimuladorAberto(true)}
+            disabled={!podeEditarLote}
+          >
+            {temDadosDeCompra(lote) ? 'Recalcular' : 'Registrar compra'}
+          </button>
+        </div>
+
+        {temDadosDeCompra(lote) ? (
+          <>
+            <div className="compra-resumo">
+              <div className="compra-resumo-item">
+                <span>Custo por cabeça</span>
+                <strong>{brl(resumoCompra.custoPorCabeca)}</strong>
+              </div>
+              <div className="compra-resumo-item">
+                <span>Total do lote</span>
+                <strong>{brl(resumoCompra.custoTotal)}</strong>
+              </div>
+              <div className="compra-resumo-item">
+                <span>Custo real por kg</span>
+                <strong>{brl(resumoCompra.custoRealPorKg)}</strong>
+              </div>
+              <div className="compra-resumo-item">
+                <span>Peso médio de compra</span>
+                <strong>{lote.pesoMedioCompra} kg</strong>
+              </div>
+            </div>
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13 }}>
+              Negociado a {brl(lote.valorKgCompra ?? 0)}/kg
+              {resumoCompra.custoAcessorioPorCabeca > 0 && (
+                <>
+                  {' '}+ {brl(resumoCompra.custoAcessorioPorCabeca)} por cabeça de frete e comissão
+                </>
+              )}
+              .
+            </p>
+          </>
+        ) : (
+          <p style={{ color: 'var(--texto-suave)', fontSize: 14 }}>
+            Este lote foi cadastrado sem o custo da compra. Registre pra ter o custo por cabeça e o
+            total investido.
+          </p>
+        )}
       </div>
 
       <div className="grid-cards" style={{ marginBottom: 24 }}>
@@ -413,6 +506,22 @@ export default function DetalheLotePage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {simuladorAberto && (
+        <SimuladorCompra
+          valoresIniciais={{
+            quantidadeAnimais: lote.quantidadeAnimais,
+            pesoMedioCompra: lote.pesoMedioCompra ?? undefined,
+            valorKgCompra: lote.valorKgCompra ?? undefined,
+            fretePorCabeca: lote.fretePorCabeca ?? undefined,
+            comissaoPorCabeca: lote.comissaoPorCabeca ?? undefined,
+          }}
+          textoConfirmar="Salvar custo da compra"
+          salvando={salvando}
+          onConfirmar={salvarCompra}
+          onCancelar={() => setSimuladorAberto(false)}
+        />
       )}
 
       {modalAberto && (

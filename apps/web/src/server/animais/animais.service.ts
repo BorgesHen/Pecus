@@ -4,6 +4,7 @@ import {
   CATEGORIAS_POR_ESPECIE,
   LABEL_CATEGORIA_ANIMAL,
   LABEL_ESPECIE_ANIMAL,
+  dataNascimentoPorIdade,
   type CategoriaAnimal,
   type EspecieAnimal,
 } from '@pecus/shared';
@@ -69,7 +70,13 @@ export async function criar(empresaId: string, dtoOriginal: CriarAnimalDto) {
       sexo: dto.sexo,
       categoria: dto.categoria,
       dataEntrada: new Date(dto.dataEntrada),
-      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+      // A tela manda idade; o banco guarda nascimento (ver idade-animal.ts).
+      // A referência é a data de entrada: "tinha 18 meses quando chegou" não
+      // muda de significado se o cadastro for feito dias depois.
+      dataNascimento:
+        dto.idadeMeses != null
+          ? new Date(dataNascimentoPorIdade(dto.dataEntrada, dto.idadeMeses))
+          : undefined,
       pesoEntrada: dto.pesoEntrada,
       observacao: dto.observacao,
     },
@@ -86,12 +93,20 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarAni
   const especie = (loteDestino?.especie ?? animal.especie) as EspecieAnimal;
   garantirCategoriaDaEspecie(especie, (dto.categoria ?? animal.categoria) as CategoriaAnimal);
 
+  // `idadeMeses` não é coluna: sai do payload e vira data de nascimento,
+  // recalculada contra a data de entrada que o animal já tem.
+  const { idadeMeses, ...camposDoBanco } = dto;
+  const dataEntradaISO = animal.dataEntrada.toISOString().slice(0, 10);
+
   return prisma.animal.update({
     where: { id },
     data: {
-      ...dto,
+      ...camposDoBanco,
       especie,
-      dataNascimento: dto.dataNascimento ? new Date(dto.dataNascimento) : undefined,
+      dataNascimento:
+        idadeMeses != null
+          ? new Date(dataNascimentoPorIdade(dataEntradaISO, idadeMeses))
+          : undefined,
     },
   });
 }

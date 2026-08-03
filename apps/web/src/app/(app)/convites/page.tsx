@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { listarConvites, criarConvite, removerConvite, type Convite } from '@/lib/convites';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function ConvitesPage() {
+  const toast = useToast();
   const [convites, setConvites] = useState<Convite[] | null>(null);
   const [erro, setErro] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
@@ -34,21 +36,24 @@ export default function ConvitesPage() {
       await navigator.clipboard.writeText(linkCadastro(codigo));
       setCodigoCopiado(codigo);
       setTimeout(() => setCodigoCopiado(''), 2000);
+      toast.sucesso('Link de cadastro copiado.');
     } catch {
-      // clipboard indisponível (ex: contexto não seguro) — sem efeito visual, sem quebrar a tela
+      // Pode falhar por contexto não seguro (http sem localhost) ou permissão —
+      // antes isso era silencioso, então ninguém entendia por que nada acontecia.
+      toast.erro('Não foi possível copiar. Copie o código manualmente.');
     }
   }
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       await criarConvite(observacao.trim() || undefined);
       setModalAberto(false);
       setObservacao('');
+      toast.sucesso('Convite criado. Copie o link e mande pro cliente.');
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao criar convite');
+      toast.erroDe(e, 'Erro ao criar convite');
     } finally {
       setSalvando(false);
     }
@@ -56,11 +61,13 @@ export default function ConvitesPage() {
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const codigo = paraExcluir.codigo;
     try {
       await removerConvite(paraExcluir.id);
+      toast.sucesso(`Convite ${codigo} removido.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao remover convite');
+      toast.erroDe(e, 'Erro ao remover convite');
     } finally {
       setParaExcluir(null);
     }

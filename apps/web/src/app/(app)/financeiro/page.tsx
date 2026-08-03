@@ -27,6 +27,7 @@ import { hojeISO } from '@/lib/data';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import type { ContaBancaria, Contato } from '@pecus/shared';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const FORM_VAZIO: NovoLancamento = {
@@ -44,6 +45,7 @@ const CORES_STATUS: Record<StatusLancamento, string> = {
 };
 
 export default function FinanceiroPage() {
+  const toast = useToast();
   const { podeEditar, campoAtivo } = usePermissoes();
   const podeEditarFinanceiro = podeEditar(ModuloSistema.FINANCEIRO);
 
@@ -110,13 +112,13 @@ export default function FinanceiroPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       await criarLancamento(form);
       setModalAberto(false);
+      toast.sucesso(`Lançamento de ${brl(form.valorTotal)} registrado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar lançamento');
+      toast.erroDe(e, 'Erro ao salvar lançamento');
     } finally {
       setSalvando(false);
     }
@@ -136,19 +138,22 @@ export default function FinanceiroPage() {
         contaBancariaId: bancoLiquidacao || undefined,
       });
       setLiquidando(null);
+      toast.sucesso(`Lançamento de ${brl(liquidando.valorTotal)} liquidado.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao liquidar lançamento');
+      toast.erroDe(e, 'Erro ao liquidar lançamento');
     }
   }
 
   async function confirmarExclusao() {
     if (!paraExcluir) return;
+    const valor = paraExcluir.valorTotal;
     try {
       await removerLancamento(paraExcluir.id);
+      toast.sucesso(`Lançamento de ${brl(valor)} excluído.`);
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao excluir lançamento');
+      toast.erroDe(e, 'Erro ao excluir lançamento');
     } finally {
       setParaExcluir(null);
     }

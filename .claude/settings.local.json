@@ -47,7 +47,18 @@
       "Bash(NEXT_DIST_DIR=.next-claude npx next start -p 3042)",
       "Bash(sed -i '' \"s|botaoRecolherVisivel: getComputedStyle\\(document.querySelector\\('.shell-recolher'\\) \\\\|\\\\| document.body\\).display|botaoRecolherVisivel: mob.botaoRecolher|\" verifica-sidebar.js)",
       "Bash(sed -i '' \"s|rolaLateralPagina: document.documentElement.scrollWidth > document.documentElement.clientWidth,|rolaLateralPagina: document.documentElement.scrollWidth > document.documentElement.clientWidth,\\\\n    botaoRecolher: \\(\\(\\) => { const b = document.querySelector\\('.shell-recolher'\\); return b ? getComputedStyle\\(b\\).display : 'ausente'; }\\)\\(\\),|\" verifica-sidebar.js)",
-      "Bash(node -c verifica-sidebar.js)"
+      "Bash(node -c verifica-sidebar.js)",
+      "Bash(npm run *)",
+      "Bash(sed -n '/function carregar/,/^  }/p' \"apps/web/src/app/\\(app\\)/lotes/[id]/page.tsx\")",
+      "Bash(cd /Users/sollucao/Downloads/pecus && sed -n '/function carregar/,/^  }$/p' \"apps/web/src/app/\\(app\\)/lotes/[id]/page.tsx\")",
+      "Bash(mv packages/shared/dist /tmp/dist-guardado)",
+      "Bash(NEXT_DIST_DIR=.next-semdist npx next build)",
+      "Bash(lsof -ti:3043)",
+      "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/conferir-idade.ts apps/web/_ci.ts)",
+      "Bash(bash /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/testa-idade-api.sh)"
+    ],
+    "additionalDirectories": [
+      "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"
     ]
   }
 }

@@ -856,6 +856,253 @@ a {
   background: #fff;
 }
 
+/* ---------- Simulador de compra do lote ---------- */
+
+.simulador-intro {
+  margin-bottom: 16px;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+.simulador-dica {
+  margin-top: 6px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+/* Valor + base ("por cabeça" / "total do lote") na mesma linha. */
+.simulador-campo-base {
+  display: flex;
+  gap: 8px;
+}
+.simulador-campo-base input {
+  flex: 1;
+  min-width: 0;
+}
+.simulador-campo-base select {
+  flex: 0 0 132px;
+  font-size: 13px;
+}
+
+/* Botão que se comporta como link dentro de um parágrafo. */
+.link-botao {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--verde);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.simulador-resultado {
+  margin: 18px 0 4px;
+  padding: 16px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--bg);
+}
+.simulador-destaques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+}
+.simulador-rotulo {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.simulador-numero {
+  display: block;
+  margin-top: 2px;
+  color: var(--verde);
+  font-size: 24px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.simulador-linhas {
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--borda);
+}
+.simulador-linhas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--borda);
+}
+.simulador-linhas li:last-child {
+  border-bottom: none;
+}
+.simulador-linhas li > span:first-child {
+  color: var(--texto-suave);
+}
+
+.simulador-alerta {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--verde);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 14px;
+}
+
+/* Resumo da compra na tela do lote. */
+.compra-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.compra-resumo-item span {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.compra-resumo-item strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .simulador-campo-base {
+    flex-direction: column;
+  }
+  .simulador-campo-base select {
+    flex: none;
+  }
+}
+
+/* ---------- Toasts ---------- */
+
+.toasts {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 70; /* acima dos modais (50) e do lightbox da landing (60) */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(380px, calc(100vw - 40px));
+  /* O container cobre a tela toda em altura por causa do flex, então não pode
+     roubar clique — só cada toast recebe ponteiro. */
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 10px 12px 14px;
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--texto-suave);
+  border-radius: var(--raio);
+  background: var(--card);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  font-size: 14px;
+  animation: toast-entra 0.22s ease;
+}
+.toast p {
+  flex: 1;
+  min-width: 0;
+  /* As validações do backend vêm várias numa mensagem só, separadas por \n. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.toast-icone {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.toast-fechar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--texto-suave);
+  cursor: pointer;
+}
+.toast-fechar:hover {
+  background: var(--bg);
+  color: var(--texto);
+}
+
+.toast--sucesso {
+  border-left-color: var(--verde);
+}
+.toast--sucesso .toast-icone {
+  color: var(--verde);
+}
+.toast--erro {
+  border-left-color: var(--erro);
+}
+.toast--erro .toast-icone {
+  color: var(--erro);
+}
+.toast--aviso {
+  border-left-color: #b45309;
+}
+.toast--aviso .toast-icone {
+  color: #b45309;
+}
+.toast--info {
+  border-left-color: #1d4ed8;
+}
+.toast--info .toast-icone {
+  color: #1d4ed8;
+}
+
+.toast--saindo {
+  animation: toast-sai 0.18s ease forwards;
+}
+
+@keyframes toast-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toast-sai {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast--saindo {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .toasts {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}
+
 .clima-cabecalho {
   display: flex;
   flex-wrap: wrap;

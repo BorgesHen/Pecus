@@ -24,6 +24,7 @@ import {
 } from '@/lib/reproducao';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { usePermissoes } from '@/contexts/PermissoesContext';
+import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
 
 const CRIA_VAZIA: NovaCria = { identificador: '', sexo: SexoAnimal.FEMEA };
@@ -42,6 +43,7 @@ const FORM_VAZIO = {
 };
 
 export default function ReproducaoPage() {
+  const toast = useToast();
   const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarReproducao = podeEditar(ModuloSistema.REPRODUCAO);
   const temOvinos = temRecurso(RECURSO_OVINOS);
@@ -97,7 +99,6 @@ export default function ReproducaoPage() {
 
   async function salvar() {
     setSalvando(true);
-    setErro('');
     try {
       const ehParto = form.tipo === TipoEventoReprodutivo.PARTO;
       const criasPreenchidas = form.crias.filter((c) => c.identificador.trim() !== '');
@@ -118,9 +119,15 @@ export default function ReproducaoPage() {
           : {}),
       });
       setModalAberto(false);
+      const rotulo = LABEL_TIPO_EVENTO_REPRODUTIVO[form.tipo];
+      toast.sucesso(
+        ehParto && form.cadastrarCria && criasPreenchidas.length > 0
+          ? `Parto registrado com ${criasPreenchidas.length} cria(s) cadastrada(s).`
+          : `${rotulo} registrado.`,
+      );
       carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao salvar evento reprodutivo');
+      toast.erroDe(e, 'Erro ao salvar evento reprodutivo');
     } finally {
       setSalvando(false);
     }

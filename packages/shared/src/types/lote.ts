@@ -21,6 +21,16 @@ export interface Lote {
   /** % — se nulo, usa o rendimento padrão da espécie (ver ESPECIE_CONFIG). */
   rendimentoCarcaca?: number | null;
   gmdEsperado?: number | null; // kg/dia, meta de referência
+  /**
+   * Dados da compra (simulador de aquisição). Nulos = lote cadastrado sem
+   * passar pelo simulador. `pesoMedioCompra` é o peso negociado, diferente de
+   * `pesoMedioEntrada`, que é o peso na entrada da pastagem. Frete e comissão
+   * são sempre por cabeça — ver calcularCompraLote.
+   */
+  pesoMedioCompra?: number | null; // kg
+  valorKgCompra?: number | null; // R$/kg
+  fretePorCabeca?: number | null; // R$
+  comissaoPorCabeca?: number | null; // R$
   createdAt: string;
 }
 
