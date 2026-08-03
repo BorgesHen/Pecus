@@ -6,12 +6,12 @@ import * as convitesService from '@/server/convites/convites.service';
 import { CriarConviteDto } from '@/server/convites/dto';
 
 export const GET = rota(async (req) => {
-  await autorizar(req, { papeis: [PapelUsuario.ADMIN] });
+  await autorizar(req, { papeis: [PapelUsuario.ADMIN], semEmpresa: true });
   return convitesService.listar();
 });
 
 export const POST = rota(async (req) => {
-  await autorizar(req, { papeis: [PapelUsuario.ADMIN] });
+  await autorizar(req, { papeis: [PapelUsuario.ADMIN], semEmpresa: true });
   const dto = await validarCorpo(req, CriarConviteDto);
   return convitesService.criar(dto);
 });

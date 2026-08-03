@@ -214,6 +214,22 @@ model Usuario {
   papelGlobal PapelUsuario @default(USUARIO)
   createdAt DateTime @default(now())
 
+  // ----- Ciclo de vida da senha -----
+  // Conta criada pelo responsável (ou senha resetada) nasce com senha
+  // provisória: entra no sistema, mas o app só libera as telas depois que a
+  // pessoa define a senha dela. Assim o responsável nunca conhece a senha
+  // definitiva de ninguém.
+  senhaProvisoria Boolean @default(false)
+  /// Provisória tem prazo. Vencida, o login é recusado e a pessoa pede outra
+  /// pela tela de login ("Esqueci minha senha").
+  senhaProvisoriaExpiraEm DateTime?
+  /// A provisória saiu por e-mail (e não copiada à mão pelo responsável). É o
+  /// que permite tratar a troca de senha como prova de que o e-mail existe.
+  senhaProvisoriaEnviadaPorEmail Boolean @default(false)
+  /// Preenchido quando a pessoa define a senha a partir de uma provisória que
+  /// chegou por e-mail — ou seja, ela recebeu a mensagem naquele endereço.
+  emailVerificadoEm DateTime?
+
   empresas UsuarioEmpresa[]
 }
 

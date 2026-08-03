@@ -7,7 +7,7 @@ import { AtualizarRecursosPersonalizadosDto } from '@/server/empresas/dto';
 
 // Só ADMIN — o responsável da fazenda nem sabe que essa lista existe.
 export const PATCH = rota(async (req, { params }) => {
-  await autorizar(req, { papeis: [PapelUsuario.ADMIN] });
+  await autorizar(req, { papeis: [PapelUsuario.ADMIN], semEmpresa: true });
   const dto = await validarCorpo(req, AtualizarRecursosPersonalizadosDto);
   return empresasService.atualizarRecursosPersonalizados(params.id, dto);
 });

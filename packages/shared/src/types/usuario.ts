@@ -25,4 +25,10 @@ export interface UsuarioAutenticado {
   papelGlobal: PapelUsuario;
   /** Empresa ativa na sessão atual (selecionada no login/troca de fazenda). */
   empresaAtivaId?: string;
+  /**
+   * Sessão entrou com senha provisória (conta criada pelo responsável ou senha
+   * resetada). Enquanto verdadeiro o app só permite definir a senha — as
+   * demais rotas são recusadas pelo `autorizar`.
+   */
+  senhaProvisoria?: boolean;
 }

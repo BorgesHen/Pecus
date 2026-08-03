@@ -50,3 +50,25 @@ export async function trocarEmpresa(empresaId: string) {
 export function logout() {
   clearToken();
 }
+
+/** Primeiro acesso: troca a senha provisória pela definitiva e reemite o token. */
+export async function definirSenha(novaSenha: string, confirmacao: string) {
+  const resp = await api<RespostaAuth>('/auth/definir-senha', {
+    method: 'POST',
+    body: { novaSenha, confirmacao },
+  });
+  setToken(resp.access_token);
+  return resp.usuario;
+}
+
+/**
+ * "Esqueci minha senha" na tela de login. Só manda o login — a provisória vai
+ * pro e-mail cadastrado e nunca volta na resposta.
+ */
+export function esqueciSenha(usuario: string) {
+  return api<{ ok: true; mensagem: string }>('/auth/esqueci-senha', {
+    method: 'POST',
+    body: { usuario },
+    auth: false,
+  });
+}

@@ -6,18 +6,23 @@ import {
   NivelAcesso,
   PapelUsuario,
   LABEL_MODULO_SISTEMA,
+  DIAS_VALIDADE_PROVISORIA,
   type PermissoesGranulares,
 } from '@pecus/shared';
 import {
   listarUsuarios,
   criarUsuario,
+  resetarSenhaUsuario,
+  type CredenciaisProvisorias,
   atualizarInfoUsuario,
   atualizarPermissoes,
   removerUsuario,
   type VinculoUsuario,
 } from '@/lib/usuarios';
 import { ApiError } from '@/lib/api';
+import { KeyRound, Mail, MailCheck } from 'lucide-react';
 import { PopupErro } from '@/components/PopupErro';
+import { PopupCredenciais } from '@/components/PopupCredenciais';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
@@ -58,7 +63,6 @@ interface FormUsuario {
   nome: string;
   usuario: string;
   email: string;
-  senha: string;
   permissoes: Record<ModuloSistema, NivelAcesso>;
 }
 
@@ -66,7 +70,6 @@ const FORM_VAZIO: FormUsuario = {
   nome: '',
   usuario: '',
   email: '',
-  senha: '',
   permissoes: { ...PERMISSOES_VAZIAS },
 };
 
@@ -85,6 +88,27 @@ function resumoPermissoes(vinculo: VinculoUsuario) {
   return partes.length > 0 ? partes.join(' · ') : 'Sem acesso a módulos ainda';
 }
 
+/** Estado do acesso: quem ainda não criou senha e quem já confirmou o e-mail. */
+function seloAcesso(vinculo: VinculoUsuario) {
+  const u = vinculo.usuario;
+  if (u.senhaProvisoria) {
+    const vencida = !!u.senhaProvisoriaExpiraEm && new Date(u.senhaProvisoriaExpiraEm) < new Date();
+    return (
+      <span className="selo selo--pendente">
+        <KeyRound size={12} aria-hidden /> {vencida ? 'Provisória vencida' : 'Senha provisória'}
+      </span>
+    );
+  }
+  if (u.emailVerificadoEm) {
+    return (
+      <span className="selo selo--verificado">
+        <MailCheck size={12} aria-hidden /> E-mail confirmado
+      </span>
+    );
+  }
+  return <span style={{ color: 'var(--texto-suave)', fontSize: 13 }}>Senha própria</span>;
+}
+
 export default function UsuariosPage() {
   const toast = useToast();
   const [vinculos, setVinculos] = useState<VinculoUsuario[] | null>(null);
@@ -95,6 +119,10 @@ export default function UsuariosPage() {
   const [form, setForm] = useState<FormUsuario>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
   const [paraExcluir, setParaExcluir] = useState<VinculoUsuario | null>(null);
+  const [credenciais, setCredenciais] = useState<CredenciaisProvisorias | null>(null);
+  const [tituloCredenciais, setTituloCredenciais] = useState('');
+  const [resetandoId, setResetandoId] = useState('');
+  const [paraResetar, setParaResetar] = useState<VinculoUsuario | null>(null);
 
   function carregar() {
     listarUsuarios()
@@ -119,7 +147,6 @@ export default function UsuariosPage() {
       nome: vinculo.usuario.nome,
       usuario: vinculo.usuario.usuario,
       email: vinculo.usuario.email,
-      senha: '',
       permissoes,
     });
     setModalAberto(true);
@@ -142,16 +169,33 @@ export default function UsuariosPage() {
           await atualizarPermissoes(editando.usuarioId, form.permissoes);
         }
       } else {
-        await criarUsuario({
+        const r = await criarUsuario({
           nome: form.nome,
           usuario: form.usuario,
           email: form.email,
-          senha: form.senha,
           permissoes: form.permissoes,
         });
+        setModalAberto(false);
+        if (r.contaNova && r.senhaProvisoria) {
+          setTituloCredenciais(`Acesso criado para ${form.nome}`);
+          setCredenciais({
+            usuario: form.usuario,
+            nome: form.nome,
+            email: form.email,
+            senhaProvisoria: r.senhaProvisoria,
+            emailEnviado: r.emailEnviado,
+            diasValidade: DIAS_VALIDADE_PROVISORIA,
+          });
+        } else {
+          // E-mail já tinha conta no sistema: só ganhou acesso a esta fazenda,
+          // e continua entrando com a senha que já usava.
+          toast.sucesso(`${form.nome} já tinha conta e agora tem acesso a esta fazenda.`);
+        }
+        carregar();
+        return;
       }
       setModalAberto(false);
-      toast.sucesso(editando ? `Dados de ${form.nome} atualizados.` : `Usuário ${form.nome} criado.`);
+      toast.sucesso(`Dados de ${form.nome} atualizados.`);
       carregar();
     } catch (e) {
       // Duplicidade continua no popup: é um caso que o usuário precisa reconhecer
@@ -163,6 +207,23 @@ export default function UsuariosPage() {
       }
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function confirmarReset() {
+    if (!paraResetar) return;
+    const alvo = paraResetar;
+    setParaResetar(null);
+    setResetandoId(alvo.usuarioId);
+    try {
+      const dados = await resetarSenhaUsuario(alvo.usuarioId);
+      setTituloCredenciais(`Nova senha provisória de ${dados.nome}`);
+      setCredenciais(dados);
+      carregar();
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao resetar a senha');
+    } finally {
+      setResetandoId('');
     }
   }
 
@@ -207,6 +268,7 @@ export default function UsuariosPage() {
                 <th>Nome</th>
                 <th>Usuário</th>
                 <th>E-mail</th>
+                <th>Acesso</th>
                 <th>Papel</th>
                 <th>Permissões</th>
                 <th></th>
@@ -218,12 +280,21 @@ export default function UsuariosPage() {
                   <td data-label="Nome">{v.usuario.nome}</td>
                   <td data-label="Usuário">{v.usuario.usuario}</td>
                   <td data-label="E-mail">{v.usuario.email}</td>
+                  <td data-label="Acesso">{seloAcesso(v)}</td>
                   <td data-label="Papel">{v.papel}</td>
                   <td data-label="Permissões">{resumoPermissoes(v)}</td>
                   <td data-label="">
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <div className="acoes-celula" style={{ justifyContent: 'flex-end' }}>
                       <button className="btn-secundario" onClick={() => abrirEdicao(v)}>
                         Editar
+                      </button>
+                      <button
+                        className="btn-secundario"
+                        onClick={() => setParaResetar(v)}
+                        disabled={resetandoId === v.usuarioId}
+                      >
+                        <KeyRound size={14} aria-hidden />{' '}
+                        {resetandoId === v.usuarioId ? 'Gerando...' : 'Resetar senha'}
                       </button>
                       <button className="btn-perigo" onClick={() => setParaExcluir(v)}>
                         Remover
@@ -270,18 +341,18 @@ export default function UsuariosPage() {
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
               </div>
-              {!editando && (
-                <div className="campo">
-                  <label>Senha (mín. 6 caracteres)</label>
-                  <input
-                    className="input"
-                    type="password"
-                    value={form.senha}
-                    onChange={(e) => setForm({ ...form, senha: e.target.value })}
-                  />
-                </div>
-              )}
             </div>
+
+            {!editando && (
+              <div className="credencial-aviso" style={{ marginTop: 4 }}>
+                <Mail size={17} aria-hidden />
+                <span>
+                  Você não define a senha. O sistema gera uma provisória, envia pro e-mail acima e
+                  mostra aqui pra você repassar se precisar. {form.nome ? form.nome.split(' ')[0] : 'A pessoa'} cria
+                  a senha definitiva no primeiro acesso.
+                </span>
+              </div>
+            )}
 
             {(!editando || editando.papel === PapelUsuario.USUARIO) && (
               <>
@@ -323,8 +394,7 @@ export default function UsuariosPage() {
                   salvando ||
                   !form.nome ||
                   !form.usuario ||
-                  !form.email ||
-                  (!editando && form.senha.length < 6)
+                  !form.email
                 }
               >
                 {salvando ? 'Salvando...' : 'Salvar'}
@@ -336,6 +406,24 @@ export default function UsuariosPage() {
 
       {erroDuplicidade && (
         <PopupErro mensagem={erroDuplicidade} onFechar={() => setErroDuplicidade('')} />
+      )}
+
+      {credenciais && (
+        <PopupCredenciais
+          dados={credenciais}
+          titulo={tituloCredenciais}
+          onFechar={() => setCredenciais(null)}
+        />
+      )}
+
+      {paraResetar && (
+        <PopupConfirmacao
+          titulo="Resetar a senha?"
+          mensagem={`A senha atual de ${paraResetar.usuario.nome} deixa de funcionar na hora e uma provisória entra no lugar. Ela vai aparecer aqui pra você repassar, e também vai por e-mail se o envio estiver configurado.`}
+          textoConfirmar="Resetar senha"
+          onConfirmar={confirmarReset}
+          onCancelar={() => setParaResetar(null)}
+        />
       )}
 
       {paraExcluir && (

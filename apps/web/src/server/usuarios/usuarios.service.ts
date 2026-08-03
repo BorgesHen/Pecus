@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import * as bcrypt from 'bcrypt';
 import { ModuloSistema, NivelAcesso, PapelUsuario, type PermissoesGranulares } from '@pecus/shared';
 import { prisma } from '../prisma';
+import { aplicarSenhaProvisoria, gerarSenhaProvisoria, validadeProvisoria } from '../senhas';
+import * as emailService from '../email/email.service';
 import type { CriarUsuarioDto, AtualizarPermissoesDto, AtualizarUsuarioDto } from './dto';
 
 /** RESPONSAVEL/ADMIN têm acesso irrestrito: sintetiza EDITAR em todo módulo. */
@@ -26,7 +28,13 @@ export function listarDaEmpresa(empresaId: string) {
   return prisma.usuarioEmpresa.findMany({
     where: { empresaId },
     include: {
-      usuario: { select: { id: true, nome: true, email: true, usuario: true, createdAt: true } },
+      usuario: {
+        select: {
+          id: true, nome: true, email: true, usuario: true, createdAt: true,
+          // A tela mostra quem ainda não definiu senha e quem já confirmou o e-mail.
+          senhaProvisoria: true, senhaProvisoriaExpiraEm: true, emailVerificadoEm: true,
+        },
+      },
     },
   });
 }
@@ -41,7 +49,10 @@ export async function criarNaEmpresa(empresaId: string, dto: CriarUsuarioDto) {
     throw new BadRequestException('Responsável não pode criar usuário ADMIN.');
   }
 
-  return prisma.$transaction(async (tx) => {
+  const senhaProvisoria = gerarSenhaProvisoria();
+  let criouConta = false;
+
+  const vinculo = await prisma.$transaction(async (tx) => {
     let usuario = await tx.usuario.findUnique({ where: { email: dto.email } });
 
     if (!usuario) {
@@ -55,10 +66,15 @@ export async function criarNaEmpresa(empresaId: string, dto: CriarUsuarioDto) {
           nome: dto.nome,
           email: dto.email,
           usuario: dto.usuario,
-          senhaHash: await bcrypt.hash(dto.senha, 10),
+          // O responsável não escolhe senha de ninguém: a conta nasce com uma
+          // provisória e a pessoa define a definitiva no primeiro acesso.
+          senhaHash: await bcrypt.hash(senhaProvisoria, 10),
           papelGlobal: papel,
+          senhaProvisoria: true,
+          senhaProvisoriaExpiraEm: validadeProvisoria(),
         },
       });
+      criouConta = true;
     }
 
     const jaVinculado = await tx.usuarioEmpresa.findUnique({
@@ -79,6 +95,63 @@ export async function criarNaEmpresa(empresaId: string, dto: CriarUsuarioDto) {
       },
     });
   });
+
+  // Conta que já existia (e-mail conhecido) só ganhou o vínculo: a senha dela é
+  // dela, não se toca. Não há provisória pra entregar nesse caso.
+  if (!criouConta) {
+    return { vinculo, contaNova: false as const, senhaProvisoria: null, emailEnviado: false };
+  }
+
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId }, select: { nome: true } });
+  const { enviado } = await emailService.enviar({
+    para: dto.email,
+    ...emailService.mensagemBoasVindas(dto.nome, dto.usuario, senhaProvisoria, empresa?.nome ?? 'sua fazenda'),
+  });
+
+  if (enviado) {
+    await prisma.usuario.update({
+      where: { id: vinculo.usuarioId },
+      data: { senhaProvisoriaEnviadaPorEmail: true },
+    });
+  }
+
+  // A senha em claro volta pro responsável de propósito: é o que permite
+  // repassar no WhatsApp quando o e-mail não sai (ou o SMTP nem está
+  // configurado ainda). Só quem pode gerenciar usuários chega aqui.
+  return { vinculo, contaNova: true as const, senhaProvisoria, emailEnviado: enviado };
+}
+
+/**
+ * Reseta a senha de alguém da fazenda. A senha atual é substituída pela
+ * provisória na hora — é isso que resolve o caso "perdi o acesso": a antiga
+ * deixa de valer imediatamente.
+ */
+export async function resetarSenha(empresaId: string, usuarioId: string) {
+  const vinculo = await prisma.usuarioEmpresa.findUnique({
+    where: { usuarioId_empresaId: { usuarioId, empresaId } },
+    include: { usuario: { select: { id: true, nome: true, email: true, usuario: true } } },
+  });
+  if (!vinculo) throw new NotFoundException('Usuário não vinculado a esta empresa.');
+
+  const senhaProvisoria = await aplicarSenhaProvisoria(usuarioId, false);
+
+  const { enviado } = await emailService.enviar({
+    para: vinculo.usuario.email,
+    ...emailService.mensagemSenhaRedefinida(vinculo.usuario.nome, vinculo.usuario.usuario, senhaProvisoria),
+  });
+
+  if (enviado) {
+    await prisma.usuario.update({ where: { id: usuarioId }, data: { senhaProvisoriaEnviadaPorEmail: true } });
+  }
+
+  return {
+    usuario: vinculo.usuario.usuario,
+    nome: vinculo.usuario.nome,
+    email: vinculo.usuario.email,
+    senhaProvisoria,
+    emailEnviado: enviado,
+    diasValidade: emailService.DIAS_VALIDADE_PROVISORIA,
+  };
 }
 
 /** Atualiza permissões granulares de um usuário dentro da empresa. */

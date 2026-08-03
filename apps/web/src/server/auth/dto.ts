@@ -40,3 +40,20 @@ export class RegistrarDto {
   @IsString()
   nomeEmpresa: string;
 }
+
+/** Modal de primeiro acesso: a pessoa define a senha que vai usar de verdade. */
+export class DefinirSenhaDto {
+  @IsString()
+  @MinLength(6)
+  novaSenha: string;
+
+  @IsString()
+  confirmacao: string;
+}
+
+/** "Esqueci minha senha" na tela de login — só o login, o resto vai por e-mail. */
+export class EsqueciSenhaDto {
+  @IsString()
+  @MinLength(3)
+  usuario: string;
+}

@@ -19,9 +19,9 @@ export class CriarUsuarioDto {
   @IsEmail()
   email: string;
 
-  @IsString()
-  @MinLength(6)
-  senha: string;
+  // Sem campo de senha de propósito: o sistema gera uma provisória e o usuário
+  // define a definitiva no primeiro acesso, então o responsável nunca conhece
+  // a senha de ninguém.
 
   @IsOptional()
   @IsEnum(PapelUsuario)

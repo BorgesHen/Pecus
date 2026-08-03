@@ -10,6 +10,7 @@ import {
 } from '@pecus/shared';
 import { prisma } from './prisma';
 import { usuarioDoRequest } from './auth';
+import { garantirEmpresaAtiva } from './empresa-ativa';
 
 interface OpcoesAutorizacao {
   /** Equivalente a @Roles(...) — ausente ou [] = qualquer papel autenticado passa. */
@@ -18,6 +19,27 @@ interface OpcoesAutorizacao {
   moduloAtivo?: ModuloSistema;
   /** Equivalente a @Permissao(...) — checa o nível de acesso granular do usuário no módulo. */
   permissao?: { modulo: ModuloSistema; nivel: NivelAcesso };
+  /**
+   * Rota que funciona sem fazenda ativa na sessão. Só as globais precisam disso:
+   * /auth/me, /auth/trocar-empresa, /empresas (é como se escolhe uma fazenda),
+   * /clima e as telas do ADMIN que recebem o id da empresa explicitamente.
+   *
+   * O padrão é EXIGIR fazenda ativa, porque praticamente toda rota escopa dados
+   * por empresa e faz `user.empresaAtivaId!`. Quando não havia fazenda ativa
+   * (caso do ADMIN de suporte, que não tem vínculo) esse `!` era mentira em
+   * tempo de execução e o Prisma estourava com "Argument `empresaId` is
+   * missing" — um 500 "Erro interno" sem pista nenhuma pra quem clicou.
+   */
+  semEmpresa?: boolean;
+  /**
+   * Rota alcançável por sessão com senha provisória. Só /auth/me e
+   * /auth/definir-senha precisam disso.
+   *
+   * Por padrão a sessão provisória é recusada em todo o resto: sem isso, quem
+   * recebesse a senha por e-mail poderia usar o sistema indefinidamente sem
+   * nunca trocá-la, e o bloqueio seria só uma sugestão da interface.
+   */
+  permiteSenhaProvisoria?: boolean;
 }
 
 const ORDEM_NIVEL: Record<NivelAcesso, number> = {
@@ -41,6 +63,15 @@ export async function autorizar(req: Request, opcoes: OpcoesAutorizacao = {}) {
     }
   }
 
+  if (user.senhaProvisoria && !opcoes.permiteSenhaProvisoria) {
+    throw new ForbiddenException('Defina sua senha definitiva para continuar usando o sistema.');
+  }
+
+  // Fazenda ativa — antes dos guards que dependem dela. É isso que sustenta o
+  // `user.empresaAtivaId!` espalhado pelas rotas: chegando aqui sem exceção, o
+  // valor existe de verdade.
+  const empresaId = opcoes.semEmpresa ? user.empresaAtivaId ?? null : garantirEmpresaAtiva(user.empresaAtivaId);
+
   // ModuloAtivoGuard
   if (opcoes.moduloAtivo) {
     await checarModuloAtivo(user, opcoes.moduloAtivo);
@@ -51,7 +82,7 @@ export async function autorizar(req: Request, opcoes: OpcoesAutorizacao = {}) {
     await checarPermissao(user, opcoes.permissao.modulo, opcoes.permissao.nivel);
   }
 
-  return { user };
+  return { user, empresaId };
 }
 
 async function checarModuloAtivo(user: UsuarioAutenticado, modulo: ModuloSistema) {

@@ -7,7 +7,7 @@ import * as climaService from '@/server/clima/clima.service';
 // Quem salva a localização da fazenda é o PATCH de /empresas/configuracao,
 // esse sim restrito ao responsável.
 export const GET = rota(async (req) => {
-  await autorizar(req);
+  await autorizar(req, { semEmpresa: true });
   const termo = req.nextUrl.searchParams.get('q');
   if (!termo) throw new BadRequestException('Informe o termo de busca (q).');
   return climaService.buscarLocais(termo);

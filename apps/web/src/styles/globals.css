@@ -856,6 +856,85 @@ a {
   background: #fff;
 }
 
+/* ---------- Senha provisória e credenciais ---------- */
+
+.campo-erro {
+  margin: -8px 0 12px;
+  color: var(--erro);
+  font-size: 13px;
+}
+
+.credencial-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  border-left: 4px solid var(--verde);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 14px;
+}
+.credencial-aviso svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--verde);
+}
+.credencial-aviso--atencao {
+  border-left-color: #b45309;
+}
+.credencial-aviso--atencao svg {
+  color: #b45309;
+}
+
+.credencial-caixa {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--bg);
+}
+.credencial-caixa span {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.credencial-caixa strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.credencial-senha {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 20px !important;
+  letter-spacing: 0.06em;
+  color: var(--verde);
+}
+
+/* Etiqueta de estado da conta na lista de usuários. */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.selo--pendente {
+  background: rgba(180, 83, 9, 0.12);
+  color: #8a3f07;
+}
+.selo--verificado {
+  background: rgba(47, 93, 58, 0.12);
+  color: var(--verde);
+}
+
 /* ---------- Simulador de compra do lote ---------- */
 
 .simulador-intro {

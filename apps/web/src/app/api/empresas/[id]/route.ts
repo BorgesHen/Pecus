@@ -6,13 +6,13 @@ import * as empresasService from '@/server/empresas/empresas.service';
 import { AtualizarEmpresaDto } from '@/server/empresas/dto';
 
 export const GET = rota(async (req, { params }) => {
-  await autorizar(req);
+  await autorizar(req, { semEmpresa: true });
   return empresasService.detalhar(params.id);
 });
 
 // Editar dados da própria fazenda: responsável pode
 export const PATCH = rota(async (req, { params }) => {
-  await autorizar(req, { papeis: [PapelUsuario.RESPONSAVEL] });
+  await autorizar(req, { papeis: [PapelUsuario.RESPONSAVEL], semEmpresa: true });
   const dto = await validarCorpo(req, AtualizarEmpresaDto);
   return empresasService.atualizar(params.id, dto);
 });

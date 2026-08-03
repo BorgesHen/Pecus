@@ -55,7 +55,24 @@
       "Bash(NEXT_DIST_DIR=.next-semdist npx next build)",
       "Bash(lsof -ti:3043)",
       "Bash(cp /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/conferir-idade.ts apps/web/_ci.ts)",
-      "Bash(bash /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/testa-idade-api.sh)"
+      "Bash(bash /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/testa-idade-api.sh)",
+      "Bash(time curl -s -o /tmp/u.json -w 'HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Peao\",\"usuario\":\"teste__TRACKED_VAR__\",\"email\":\"teste__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{\"LOTES\":\"VER\"}}')",
+      "Bash(curl -s -o /tmp/u2.json -w 'HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Peao Tela\",\"usuario\":\"peao__TRACKED_VAR__\",\"email\":\"peao__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{\"LOTES\":\"NENHUM\",\"PESAGENS\":\"NENHUM\",\"GASTOS\":\"NENHUM\",\"RELATORIOS\":\"NENHUM\",\"USUARIOS\":\"NENHUM\",\"ANIMAIS\":\"NENHUM\",\"SANIDADE\":\"NENHUM\",\"REPRODUCAO\":\"NENHUM\",\"ESTOQUE\":\"NENHUM\",\"METODOS_MANEJO\":\"NENHUM\",\"PIQUETES\":\"NENHUM\",\"AREAS\":\"NENHUM\",\"FINANCEIRO\":\"NENHUM\"}}')",
+      "Bash(curl -s -o /tmp/u3.json -w 'HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Repetido\",\"usuario\":\"outro__TRACKED_VAR__\",\"email\":\"peao__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{}}')",
+      "Bash(curl -s -o /tmp/d.json -w 'HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3044/api/usuarios -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Dev Peao\",\"usuario\":\"dev__TRACKED_VAR__\",\"email\":\"dev__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{\"LOTES\":\"VER\",\"ANIMAIS\":\"VER\"}}')",
+      "Bash(curl -s -o /tmp/adm.json -w 'HTTP %{http_code}\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Admin\",\"usuario\":\"adm__TRACKED_VAR__\",\"email\":\"adm__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{}}')",
+      "Bash(curl -s -o /tmp/adm.json -w 'HTTP %{http_code}\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Admin\",\"usuario\":\"adm__TRACKED_VAR__\",\"email\":\"adm__TRACKED_VAR__@exemplo.com\",\"senha\":\"senha123\",\"permissoes\":{}}')",
+      "Bash(bash /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/testa-sem-fazenda.sh)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' 'http://localhost:3042/api/clima?lat=-31.3314&lon=-54.1069' -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(xargs kill -9)",
+      "Bash(lsof -ti:3044)",
+      "Bash(node -e \"console.log\\('nodemailer', require\\('nodemailer/package.json'\\).version\\)\")",
+      "Bash(bash /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/testa-senhas.sh)",
+      "Bash(lsof -ti:2525)",
+      "Bash(time curl -s -o /tmp/e.json -w '  HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Gmail\",\"usuario\":\"gml__TRACKED_VAR__\",\"email\":\"gml__TRACKED_VAR__@teste-claude.local\",\"permissoes\":{}}')",
+      "Bash(git log *)",
+      "Bash(curl -s -o /tmp/r.json -w '  HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Envio\",\"usuario\":\"envio__TRACKED_VAR__\",\"email\":\"contato.pecus360@gmail.com\",\"permissoes\":{}}')",
+      "Bash(ps -p 8798 -o lstart=)"
     ],
     "additionalDirectories": [
       "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"

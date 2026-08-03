@@ -3,6 +3,6 @@ import { autorizar } from '@/server/autorizar';
 
 /** Retorna os dados do usuário logado (útil pro front validar a sessão). */
 export const GET = rota(async (req) => {
-  const { user } = await autorizar(req);
+  const { user } = await autorizar(req, { semEmpresa: true, permiteSenhaProvisoria: true });
   return user;
 });
