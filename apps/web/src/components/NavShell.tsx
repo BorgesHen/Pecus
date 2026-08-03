@@ -17,7 +17,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  PawPrint,
   Puzzle,
   Receipt,
   Settings,
@@ -28,6 +27,7 @@ import {
   Workflow,
   type LucideIcon,
 } from 'lucide-react';
+import { IconeBovino } from './IconeBovino';
 import {
   ModuloSistema,
   PapelUsuario,
@@ -58,7 +58,7 @@ const ITENS: ItemNav[] = [
   {
     href: '/animais',
     label: 'Animais',
-    icone: PawPrint,
+    icone: IconeBovino,
     modulo: ModuloSistema.ANIMAIS,
     filhos: [
       { href: '/sanidade', label: 'Sanidade', icone: Stethoscope, modulo: ModuloSistema.SANIDADE },

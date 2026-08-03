@@ -72,7 +72,14 @@
       "Bash(time curl -s -o /tmp/e.json -w '  HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Gmail\",\"usuario\":\"gml__TRACKED_VAR__\",\"email\":\"gml__TRACKED_VAR__@teste-claude.local\",\"permissoes\":{}}')",
       "Bash(git log *)",
       "Bash(curl -s -o /tmp/r.json -w '  HTTP %{http_code}  \\(%{time_total}s\\)\\\\n' http://localhost:3042/api/usuarios -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -X POST -d '{\"nome\":\"Teste Envio\",\"usuario\":\"envio__TRACKED_VAR__\",\"email\":\"contato.pecus360@gmail.com\",\"permissoes\":{}}')",
-      "Bash(ps -p 8798 -o lstart=)"
+      "Bash(ps -p 8798 -o lstart=)",
+      "Bash(cat)",
+      "Bash(node /tmp/render-icone.mjs)",
+      "Bash(sed -i '' 's|/icones.html|/bovino.html|; s|/icones.png|/bovino.png|; s|height: 220|height: 460|' shot-icones.js)",
+      "Bash(node shot-icones.js)",
+      "Bash(cp /tmp/render-icone.mjs ./_ri.mjs)",
+      "Bash(node ./_ri.mjs)",
+      "Bash(rm -f ./_ri.mjs)"
     ],
     "additionalDirectories": [
       "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"
