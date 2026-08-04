@@ -20,6 +20,8 @@ import {
   MESES_POR_UNIDADE,
   dataNascimentoPorIdade,
   idadeDoAnimal,
+  ESPECIE_CONFIG,
+  formatarGmd,
   type UnidadeIdade,
 } from '@pecus/shared';
 import { listarAnimais, criarAnimal, type AnimalComLote, type NovoAnimal } from '@/lib/animais';
@@ -43,8 +45,10 @@ const FORM_VAZIO: NovoAnimal = {
 export default function AnimaisPage() {
   const router = useRouter();
   const toast = useToast();
-  const { podeEditar, campoAtivo, temRecurso } = usePermissoes();
+  const { podeEditar, podeAcessar, campoAtivo, temRecurso } = usePermissoes();
   const podeEditarAnimais = podeEditar(ModuloSistema.ANIMAIS);
+  // Peso e GMD vivem no módulo Pesagens, então acompanham a permissão dele.
+  const podeVerPesagens = podeAcessar(ModuloSistema.PESAGENS);
   const temOvinos = temRecurso(RECURSO_OVINOS);
 
   const [animais, setAnimais] = useState<AnimalComLote[] | null>(null);
@@ -119,6 +123,23 @@ export default function AnimaisPage() {
   }
 
   const hoje = hojeISO();
+
+  /**
+   * Peso atual = último ponto da linha do tempo de peso (pesagem mais recente
+   * ou, se não houver nenhuma, o peso de entrada). O cálculo vem pronto do
+   * servidor junto da listagem, numa consulta só pra todos os animais.
+   */
+  function pesoAtualNaLista(animal: AnimalComLote) {
+    const pontos = animal.gmd?.pontos ?? [];
+    const ultimo = pontos[pontos.length - 1];
+    return ultimo ? `${ultimo.peso} kg` : '—';
+  }
+
+  /** GMD em kg/dia (bovino) ou g/dia (ovino); "—" enquanto não há dois pesos. */
+  function gmdNaLista(animal: AnimalComLote) {
+    if (animal.gmd?.gmd == null) return '—';
+    return formatarGmd(animal.gmd.gmd, ESPECIE_CONFIG[animal.especie].gmdEmGramas);
+  }
 
   // A idade é guardada em meses; o campo mostra na unidade escolhida.
   const idadeDigitada =
@@ -221,6 +242,10 @@ export default function AnimaisPage() {
                 <th>Sexo</th>
                 {campoAtivo('animais.dataNascimento') && <th>Idade</th>}
                 <th>Lote</th>
+                {/* Peso e GMD são do módulo Pesagens: quem não tem acesso a ele
+                    não recebe esses números do servidor. */}
+                {podeVerPesagens && <th>Peso atual</th>}
+                {podeVerPesagens && <th>GMD</th>}
                 <th>Status</th>
                 <th>Entrada</th>
               </tr>
@@ -238,6 +263,10 @@ export default function AnimaisPage() {
                     <td data-label="Idade">{idadeDoAnimal(a, hoje)?.texto ?? '—'}</td>
                   )}
                   <td data-label="Lote">{a.lote?.identificacao ?? '—'}</td>
+                  {podeVerPesagens && <td data-label="Peso atual">{pesoAtualNaLista(a)}</td>}
+                  {/* GMD individual: prévia enquanto o animal está na fazenda,
+                      fechado depois da saída (ver gmd-animal.ts). */}
+                  {podeVerPesagens && <td data-label="GMD">{gmdNaLista(a)}</td>}
                   <td data-label="Status">{LABEL_STATUS_ANIMAL[a.status]}</td>
                   <td data-label="Entrada">{brData(a.dataEntrada)}</td>
                 </tr>

@@ -5,9 +5,11 @@ import {
   LABEL_CATEGORIA_ANIMAL,
   LABEL_ESPECIE_ANIMAL,
   dataNascimentoPorIdade,
+  validarDataPesagem,
   type CategoriaAnimal,
   type EspecieAnimal,
 } from '@pecus/shared';
+import { gmdPorAnimal, registrarPesoDeSaida } from './pesagem-animal.service';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
@@ -39,12 +41,29 @@ async function garantirIdentificadorLivre(empresaId: string, identificador: stri
   if (existente) throw new ConflictException(['Já existe um animal com esse identificador nesta fazenda.']);
 }
 
-export function listar(empresaId: string, filtros: { loteId?: string; status?: StatusAnimal }) {
-  return prisma.animal.findMany({
+/**
+ * `incluirPeso` só é verdadeiro pra quem tem permissão no módulo Pesagens.
+ * Peso e GMD são dado daquele módulo: sem essa condição, quem só tem acesso a
+ * Animais leria o peso do rebanho pela listagem, enquanto a rota de pesagens
+ * do animal lhe responde 403 — a permissão viraria decoração.
+ */
+export async function listar(
+  empresaId: string,
+  filtros: { loteId?: string; status?: StatusAnimal },
+  incluirPeso = false,
+) {
+  const animais = await prisma.animal.findMany({
     where: { empresaId, loteId: filtros.loteId, status: filtros.status },
     include: { lote: true },
     orderBy: { createdAt: 'desc' },
   });
+
+  if (!incluirPeso) return animais;
+
+  // O GMD de todos sai de uma consulta só (ver gmdPorAnimal) — calcular animal
+  // por animal aqui seria um N+1 numa tela que lista o rebanho inteiro.
+  const gmds = await gmdPorAnimal(animais);
+  return animais.map((animal) => ({ ...animal, gmd: gmds.get(animal.id) ?? null }));
 }
 
 export async function detalhar(empresaId: string, id: string) {
@@ -123,9 +142,28 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarAni
 }
 
 export async function darSaida(empresaId: string, id: string, dto: DarSaidaAnimalDto) {
-  await detalhar(empresaId, id);
-  return prisma.animal.update({
-    where: { id },
-    data: { status: dto.status, dataSaida: new Date(dto.dataSaida), motivoSaida: dto.motivoSaida },
+  const animal = await detalhar(empresaId, id);
+  const dataSaida = new Date(dto.dataSaida);
+
+  if (dto.pesoSaida != null) {
+    // A saída não pode ser antes da entrada, senão o peso de saída entraria
+    // como pesagem numa data que o animal ainda não estava na fazenda.
+    const problema = validarDataPesagem(animal, dto.dataSaida);
+    if (problema) throw new BadRequestException([problema]);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const atualizado = await tx.animal.update({
+      where: { id },
+      data: { status: dto.status, dataSaida, motivoSaida: dto.motivoSaida },
+    });
+
+    // O peso de saída é gravado como pesagem comum na data da saída: é o que
+    // mantém "último peso = peso de saída" verdadeiro por construção.
+    if (dto.pesoSaida != null) {
+      await registrarPesoDeSaida(tx, id, dataSaida, dto.pesoSaida);
+    }
+
+    return atualizado;
   });
 }

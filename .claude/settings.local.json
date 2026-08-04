@@ -90,7 +90,19 @@
       "Bash(node --input-type=module -e ' *)",
       "Bash(npx tsx -e ' *)",
       "Bash(python3 -)",
-      "Bash(echo \"--- exit=$? ---\")"
+      "Bash(echo \"--- exit=$? ---\")",
+      "Bash(sed -n '/^model Animal {/,/^}/p' apps/web/prisma/schema.prisma)",
+      "Bash(sed -n '/^model Pesagem {/,/^}/p' apps/web/prisma/schema.prisma)",
+      "Bash(xargs -I{} sh -c 'echo \"--- {}\"; cat {}')",
+      "Bash(npx tsx *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(node testa-gmd-api.js)",
+      "Bash(node ui-gmd.js)",
+      "Bash(node limpa-gmd.js)",
+      "Bash(node setup-gmd.js)",
+      "Bash(node diag-rls.js)",
+      "Bash(cp ctx-gmd.json ctx-gmd-bkp.json)",
+      "Bash(node setup-atividades.js)"
     ],
     "additionalDirectories": [
       "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"

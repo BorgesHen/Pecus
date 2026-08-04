@@ -1,5 +1,11 @@
 import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
-import { SexoAnimal, CategoriaAnimal, StatusAnimal, IDADE_MAXIMA_MESES } from '@pecus/shared';
+import {
+  SexoAnimal,
+  CategoriaAnimal,
+  StatusAnimal,
+  IDADE_MAXIMA_MESES,
+  PESO_MAXIMO_KG,
+} from '@pecus/shared';
 
 export class CriarAnimalDto {
   @IsString()
@@ -81,4 +87,31 @@ export class DarSaidaAnimalDto {
   @IsOptional()
   @IsString()
   motivoSaida?: string;
+
+  /**
+   * Peso na saída. Vira uma pesagem normal na data da saída, e não uma coluna
+   * própria: assim "último peso = peso de saída" continua sendo um só número,
+   * sem dois lugares livres pra divergir. Opcional porque morte e
+   * transferência costumam não ter balança.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(PESO_MAXIMO_KG)
+  pesoSaida?: number;
+}
+
+/** Pesagem individual do animal — a base do GMD individual. */
+export class CriarPesagemAnimalDto {
+  @IsDateString()
+  data: string;
+
+  @IsNumber()
+  @Min(1)
+  @Max(PESO_MAXIMO_KG)
+  peso: number;
+
+  @IsOptional()
+  @IsString()
+  observacao?: string;
 }

@@ -23,4 +23,5 @@ export * from './config/campos-configuraveis';
 export * from './config/recursos-personalizados';
 export * from './config/compra-lote';
 export * from './config/idade-animal';
+export * from './config/gmd-animal';
 export * from './config/senha';

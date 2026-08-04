@@ -1,8 +1,28 @@
 import { api } from './api';
-import type { Animal, Lote, StatusAnimal } from '@pecus/shared';
+import type { Animal, Lote, ResultadoGmdAnimal, StatusAnimal } from '@pecus/shared';
 
 export interface AnimalComLote extends Animal {
   lote?: Lote | null;
+  /** Vem calculado na listagem; nulo quando o animal não tem pesos suficientes. */
+  gmd?: ResultadoGmdAnimal | null;
+}
+
+export interface PesagemDoAnimal {
+  id: string;
+  data: string;
+  peso: number;
+  observacao?: string | null;
+}
+
+export interface HistoricoPesoAnimal {
+  pesagens: PesagemDoAnimal[];
+  gmd: ResultadoGmdAnimal;
+}
+
+export interface NovaPesagemAnimal {
+  data: string;
+  peso: number;
+  observacao?: string;
 }
 
 export interface NovoAnimal {
@@ -39,7 +59,20 @@ export function atualizarAnimal(id: string, dados: Partial<NovoAnimal>) {
 
 export function darSaidaAnimal(
   id: string,
-  dados: { status: StatusAnimal; dataSaida: string; motivoSaida?: string },
+  dados: { status: StatusAnimal; dataSaida: string; motivoSaida?: string; pesoSaida?: number },
 ) {
   return api<Animal>(`/animais/${id}/dar-saida`, { method: 'POST', body: dados });
+}
+
+/** Pesagens do animal + o GMD já calculado no servidor. */
+export function obterHistoricoPeso(animalId: string) {
+  return api<HistoricoPesoAnimal>(`/animais/${animalId}/pesagens`);
+}
+
+export function criarPesagemAnimal(animalId: string, dados: NovaPesagemAnimal) {
+  return api<PesagemDoAnimal>(`/animais/${animalId}/pesagens`, { method: 'POST', body: dados });
+}
+
+export function removerPesagemAnimal(animalId: string, pesagemId: string) {
+  return api<{ ok: boolean }>(`/animais/${animalId}/pesagens/${pesagemId}`, { method: 'DELETE' });
 }

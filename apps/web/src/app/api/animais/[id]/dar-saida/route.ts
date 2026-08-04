@@ -14,11 +14,12 @@ export const POST = rota(async (req, { params }) => {
   const dto = await validarCorpo(req, DarSaidaAnimalDto);
   const animal = await animaisService.darSaida(empresaId, params.id, dto);
   // Saída do rebanho (venda, morte, transferência) é movimentação.
+  const peso = dto.pesoSaida != null ? ` com ${dto.pesoSaida} kg` : '';
   await auditar(user, empresaId).movimentacao(
     EntidadeAtividade.ANIMAL,
     animal.id,
-    `Saída do animal ${animal.identificador}: ${LABEL_STATUS_ANIMAL[dto.status]}`,
-    { motivoSaida: dto.motivoSaida ?? null, dataSaida: dto.dataSaida },
+    `Saída do animal ${animal.identificador}: ${LABEL_STATUS_ANIMAL[dto.status]}${peso}`,
+    { motivoSaida: dto.motivoSaida ?? null, dataSaida: dto.dataSaida, pesoSaida: dto.pesoSaida ?? null },
   );
   return animal;
 });

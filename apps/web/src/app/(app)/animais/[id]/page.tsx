@@ -16,9 +16,22 @@ import {
   TipoEventoReprodutivo,
   LABEL_TIPO_EVENTO_REPRODUTIVO,
   idadeDoAnimal,
+  ESPECIE_CONFIG,
+  formatarGmd,
+  PESO_MAXIMO_KG,
 } from '@pecus/shared';
 import type { EventoSanitario } from '@pecus/shared';
-import { obterAnimal, darSaidaAnimal, type AnimalComLote } from '@/lib/animais';
+import {
+  obterAnimal,
+  darSaidaAnimal,
+  obterHistoricoPeso,
+  criarPesagemAnimal,
+  removerPesagemAnimal,
+  type AnimalComLote,
+  type HistoricoPesoAnimal,
+  type PesagemDoAnimal,
+} from '@/lib/animais';
+import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 import {
   listarEventosPorAnimal,
   criarEventoSanitario,
@@ -38,8 +51,13 @@ export default function DetalheAnimalPage() {
   const toast = useToast();
   const params = useParams<{ id: string }>();
   const animalId = params.id;
-  const { podeEditar, campoAtivo } = usePermissoes();
+  const { podeEditar, podeAcessar, campoAtivo } = usePermissoes();
   const podeEditarAnimais = podeEditar(ModuloSistema.ANIMAIS);
+  // Registrar peso é permissão de Pesagens, como nas pesagens de lote. Sem nem
+  // o "ver" do módulo, a ficha não mostra peso nenhum — em vez de mostrar "—",
+  // que pareceria animal sem pesagem.
+  const podeRegistrarPesagem = podeEditar(ModuloSistema.PESAGENS);
+  const podeVerPesagens = podeAcessar(ModuloSistema.PESAGENS);
 
   const [animal, setAnimal] = useState<AnimalComLote | null>(null);
   const [eventosSanitarios, setEventosSanitarios] = useState<EventoSanitario[] | null>(null);
@@ -48,7 +66,14 @@ export default function DetalheAnimalPage() {
   const [statusSaida, setStatusSaida] = useState<StatusAnimal>(StatusAnimal.VENDIDO);
   const [dataSaida, setDataSaida] = useState(new Date().toISOString().slice(0, 10));
   const [motivoSaida, setMotivoSaida] = useState('');
+  const [pesoSaida, setPesoSaida] = useState('');
   const [salvando, setSalvando] = useState(false);
+
+  // Pesagens individuais e o GMD que sai delas.
+  const [historicoPeso, setHistoricoPeso] = useState<HistoricoPesoAnimal | null>(null);
+  const [modalPesagemAberto, setModalPesagemAberto] = useState(false);
+  const [formPesagem, setFormPesagem] = useState({ data: hojeISO(), peso: '', observacao: '' });
+  const [pesagemParaExcluir, setPesagemParaExcluir] = useState<PesagemDoAnimal | null>(null);
 
   const [modalSanidadeAberto, setModalSanidadeAberto] = useState(false);
   const [formSanidade, setFormSanidade] = useState<Omit<NovoEventoSanitario, 'animalId'>>({
@@ -76,6 +101,45 @@ export default function DetalheAnimalPage() {
     listarEventosReprodutivosPorAnimal(animalId)
       .then(setEventosReprodutivos)
       .catch(() => setEventosReprodutivos(null));
+    // Só busca se o módulo Pesagens estiver liberado: sem permissão a rota
+    // responde 403, e um erro previsível não precisa virar requisição.
+    if (podeVerPesagens) {
+      obterHistoricoPeso(animalId).then(setHistoricoPeso).catch(() => setHistoricoPeso(null));
+    }
+  }
+
+  async function salvarPesagem() {
+    setSalvando(true);
+    const peso = Number(formPesagem.peso);
+    try {
+      await criarPesagemAnimal(animalId, {
+        data: formPesagem.data,
+        peso,
+        observacao: formPesagem.observacao || undefined,
+      });
+      setModalPesagemAberto(false);
+      toast.sucesso(`Pesagem de ${peso} kg registrada.`);
+      setFormPesagem({ data: hojeISO(), peso: '', observacao: '' });
+      carregar();
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao registrar pesagem');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function confirmarExclusaoPesagem() {
+    if (!pesagemParaExcluir) return;
+    const excluida = pesagemParaExcluir;
+    try {
+      await removerPesagemAnimal(animalId, excluida.id);
+      toast.sucesso(`Pesagem de ${excluida.peso} kg excluída.`);
+      carregar();
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao excluir pesagem');
+    } finally {
+      setPesagemParaExcluir(null);
+    }
   }
 
   async function salvarEventoReprodutivo() {
@@ -141,9 +205,16 @@ export default function DetalheAnimalPage() {
   async function confirmarSaida() {
     setSalvando(true);
     try {
-      await darSaidaAnimal(animalId, { status: statusSaida, dataSaida, motivoSaida: motivoSaida || undefined });
+      await darSaidaAnimal(animalId, {
+        status: statusSaida,
+        dataSaida,
+        motivoSaida: motivoSaida || undefined,
+        // O peso da saída entra como pesagem na data da saída, fechando o GMD.
+        pesoSaida: pesoSaida ? Number(pesoSaida) : undefined,
+      });
       setModalSaidaAberto(false);
       toast.sucesso(`Saída registrada: ${LABEL_STATUS_ANIMAL[statusSaida]}.`);
+      setPesoSaida('');
       carregar();
     } catch (e) {
       toast.erroDe(e, 'Erro ao registrar saída');
@@ -169,6 +240,20 @@ export default function DetalheAnimalPage() {
       </div>
     );
   }
+
+  const gmd = historicoPeso?.gmd ?? null;
+  // Último ponto da linha do tempo = peso atual do animal (e, depois da saída,
+  // o peso de saída). Já vem calculado do servidor, junto do GMD.
+  const ultimoPonto = gmd?.pontos[gmd.pontos.length - 1] ?? null;
+  // Ovino é acompanhado em gramas por dia; bovino em quilos — ver ESPECIE_CONFIG.
+  const gmdEmGramas = ESPECIE_CONFIG[animal.especie].gmdEmGramas;
+  const mostrarGmd = (kgPorDia: number) => formatarGmd(kgPorDia, gmdEmGramas);
+  const saiu = !!animal.dataSaida;
+  // Os pontos do GMD não carregam a observação (o cálculo não precisa dela),
+  // então ela é buscada pelo id — é o que rotula a linha "Peso de saída".
+  const observacaoPorPesagem = new Map(
+    (historicoPeso?.pesagens ?? []).map((p) => [p.id, p.observacao ?? '']),
+  );
 
   return (
     <div className="container">
@@ -216,10 +301,29 @@ export default function DetalheAnimalPage() {
             Status{animal.dataSaida ? ` desde ${brData(animal.dataSaida)}` : ''}
           </div>
         </div>
-        <div className="card">
-          <div className="metrica">{animal.pesoEntrada ? `${animal.pesoEntrada} kg` : '—'}</div>
-          <div className="metrica-label">Peso de entrada</div>
-        </div>
+        {podeVerPesagens && (
+          <>
+            <div className="card">
+              <div className="metrica">{ultimoPonto ? `${ultimoPonto.peso} kg` : '—'}</div>
+              <div className="metrica-label">
+                {saiu ? 'Peso de saída' : 'Peso atual'}
+                {animal.pesoEntrada != null && ultimoPonto && !ultimoPonto.ehEntrada
+                  ? ` (entrada: ${animal.pesoEntrada} kg)`
+                  : ''}
+              </div>
+            </div>
+            <div className="card">
+              <div className="metrica">{gmd?.gmd != null ? mostrarGmd(gmd.gmd) : '—'}</div>
+              <div className="metrica-label">
+                {/* Enquanto o animal está na fazenda o número muda a cada
+                    pesagem; depois da saída ele está fechado. Dizer qual dos
+                    dois é evita ler uma prévia como resultado final. */}
+                {gmd?.gmd == null ? 'GMD' : gmd.previa ? 'GMD (prévia)' : 'GMD final'}
+                {gmd?.dias ? ` · ${gmd.dias} dias` : ''}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 24 }}>
@@ -240,6 +344,167 @@ export default function DetalheAnimalPage() {
           </p>
         )}
       </div>
+
+      {/* Peso e GMD pertencem ao módulo Pesagens: sem acesso a ele, a
+          seção não aparece — melhor do que mostrar "nenhuma pesagem",
+          que faria parecer animal sem registro. */}
+      {podeVerPesagens && (
+        <>
+        <div className="topo-tela">
+          <h3>Pesagens</h3>
+          <button
+            className="btn-secundario"
+            onClick={() => setModalPesagemAberto(true)}
+            disabled={!podeRegistrarPesagem}
+          >
+            + Nova pesagem
+          </button>
+        </div>
+
+        {gmd?.mensagem && (
+          <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>{gmd.mensagem}</p>
+        )}
+
+        {!gmd || gmd.pontos.length === 0 ? (
+          <div className="card" style={{ marginBottom: 24 }}>
+            <p style={{ color: 'var(--texto-suave)' }}>Nenhuma pesagem registrada ainda.</p>
+          </div>
+        ) : (
+          <div className="tabela-wrap" style={{ marginBottom: 24 }}>
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Peso</th>
+                  <th>Ganho</th>
+                  <th>GMD do período</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Da pesagem mais recente pra mais antiga, terminando na entrada.
+                    O GMD por período é o que mostra se o ganho acelerou ou caiu —
+                    a média geral do card esconde isso. */}
+                {[...gmd.pontos].reverse().map((ponto) => (
+                  <tr key={ponto.pesagemId ?? 'entrada'}>
+                    <td data-label="Data">
+                      {brData(ponto.data)}
+                      {ponto.ehEntrada && (
+                        <span style={{ color: 'var(--texto-suave)' }}> (entrada)</span>
+                      )}
+                      {ponto.pesagemId && observacaoPorPesagem.get(ponto.pesagemId) && (
+                        <span style={{ color: 'var(--texto-suave)' }}>
+                          {' '}
+                          ({observacaoPorPesagem.get(ponto.pesagemId)})
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="Peso">{ponto.peso} kg</td>
+                    <td data-label="Ganho">
+                      {ponto.ganhoDoPeriodo == null
+                        ? '—'
+                        : `${ponto.ganhoDoPeriodo > 0 ? '+' : ''}${ponto.ganhoDoPeriodo} kg em ${ponto.diasDoPeriodo} dias`}
+                    </td>
+                    <td data-label="GMD do período">
+                      {ponto.gmdDoPeriodo == null ? '—' : mostrarGmd(ponto.gmdDoPeriodo)}
+                    </td>
+                    <td data-label="">
+                      {/* A entrada não é pesagem: se sair, tem que sair pela
+                          edição do animal. */}
+                      {ponto.pesagemId && (
+                        <button
+                          className="btn-perigo"
+                          onClick={() =>
+                            setPesagemParaExcluir({
+                              id: ponto.pesagemId!,
+                              data: ponto.data,
+                              peso: ponto.peso,
+                            })
+                          }
+                          disabled={!podeRegistrarPesagem}
+                        >
+                          Excluir
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        </>
+      )}
+
+      {modalPesagemAberto && (
+        <div className="modal-overlay" onClick={() => setModalPesagemAberto(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Nova pesagem</h3>
+
+            <div className="linha-campos">
+              <div className="campo">
+                <label>Data</label>
+                <input
+                  className="input"
+                  type="date"
+                  // A janela vai da entrada até hoje — ou até a saída, se o
+                  // animal já saiu (aí só cabe completar pesagem esquecida).
+                  // O backend recusa fora disso; barrar aqui evita a viagem.
+                  min={animal.dataEntrada.slice(0, 10)}
+                  max={saiu ? animal.dataSaida!.slice(0, 10) : hojeISO()}
+                  value={formPesagem.data}
+                  onChange={(e) => setFormPesagem({ ...formPesagem, data: e.target.value })}
+                />
+              </div>
+              <div className="campo">
+                <label>Peso (kg)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={PESO_MAXIMO_KG}
+                  step="0.1"
+                  value={formPesagem.peso}
+                  onChange={(e) => setFormPesagem({ ...formPesagem, peso: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="campo">
+              <label>Observação (opcional)</label>
+              <input
+                className="input"
+                value={formPesagem.observacao}
+                onChange={(e) => setFormPesagem({ ...formPesagem, observacao: e.target.value })}
+              />
+            </div>
+
+            <div className="modal-acoes">
+              <button className="btn-secundario" onClick={() => setModalPesagemAberto(false)}>
+                Cancelar
+              </button>
+              <button
+                className="btn"
+                onClick={salvarPesagem}
+                disabled={salvando || !formPesagem.peso || Number(formPesagem.peso) <= 0}
+              >
+                {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pesagemParaExcluir && (
+        <PopupConfirmacao
+          titulo="Excluir pesagem?"
+          mensagem={`A pesagem de ${pesagemParaExcluir.peso} kg de ${brData(
+            pesagemParaExcluir.data,
+          )} será removida e o GMD será recalculado.`}
+          onConfirmar={confirmarExclusaoPesagem}
+          onCancelar={() => setPesagemParaExcluir(null)}
+        />
+      )}
 
       <div className="topo-tela">
         <h3>Histórico sanitário</h3>
@@ -483,9 +748,28 @@ export default function DetalheAnimalPage() {
               </div>
             </div>
 
-            <div className="campo">
-              <label>Observação (opcional)</label>
-              <input className="input" value={motivoSaida} onChange={(e) => setMotivoSaida(e.target.value)} />
+            <div className="linha-campos">
+              <div className="campo">
+                <label>Peso na saída (kg, opcional)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={PESO_MAXIMO_KG}
+                  step="0.1"
+                  value={pesoSaida}
+                  onChange={(e) => setPesoSaida(e.target.value)}
+                />
+                {/* Vira uma pesagem na data da saída — é o que fecha o GMD do
+                    animal com o peso real da venda. */}
+                <p style={{ fontSize: 13, color: 'var(--texto-suave)', marginTop: 4 }}>
+                  Entra como a última pesagem e fecha o cálculo do GMD.
+                </p>
+              </div>
+              <div className="campo">
+                <label>Observação (opcional)</label>
+                <input className="input" value={motivoSaida} onChange={(e) => setMotivoSaida(e.target.value)} />
+              </div>
             </div>
 
             <div className="modal-acoes">

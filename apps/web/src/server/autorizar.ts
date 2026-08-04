@@ -119,6 +119,34 @@ async function checarModuloAtivo(user: UsuarioAutenticado, modulo: ModuloSistema
   }
 }
 
+/**
+ * Mesma checagem de permissão do `autorizar`, mas devolvendo true/false em vez
+ * de lançar.
+ *
+ * Serve pra resposta que muda de forma conforme o acesso, em vez de ser negada
+ * por inteiro: a listagem de animais, por exemplo, só inclui peso e GMD pra
+ * quem tem permissão no módulo Pesagens — sem isso, o dado do módulo escaparia
+ * por uma rota de outro módulo.
+ */
+export async function temPermissao(
+  user: UsuarioAutenticado,
+  modulo: ModuloSistema,
+  nivelExigido: NivelAcesso,
+): Promise<boolean> {
+  if (user.papelGlobal === PapelUsuario.ADMIN) return true;
+  if (!user.empresaAtivaId) return false;
+
+  const vinculo = await prisma.usuarioEmpresa.findUnique({
+    where: { usuarioId_empresaId: { usuarioId: user.id, empresaId: user.empresaAtivaId } },
+  });
+  if (!vinculo) return false;
+  if (vinculo.papel === PapelUsuario.RESPONSAVEL) return true;
+
+  const permissoes = (vinculo.permissoes ?? {}) as PermissoesGranulares;
+  const nivelUsuario = permissoes[modulo] ?? NivelAcesso.NENHUM;
+  return ORDEM_NIVEL[nivelUsuario] >= ORDEM_NIVEL[nivelExigido];
+}
+
 async function checarPermissao(user: UsuarioAutenticado, modulo: ModuloSistema, nivelExigido: NivelAcesso) {
   if (user.papelGlobal === PapelUsuario.ADMIN) return;
 

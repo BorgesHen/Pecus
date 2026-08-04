@@ -377,6 +377,7 @@ model Animal {
   eventosSanitarios   EventoSanitario[]
   eventosReprodutivos EventoReprodutivo[] @relation("EventoReprodutivoAnimal")
   nascimentosComoCria EventoReprodutivo[] @relation("EventoReprodutivoCria")
+  pesagens            PesagemAnimal[]
 
   @@unique([empresaId, identificador])
 }
@@ -444,6 +445,29 @@ model Pesagem {
   createdAt DateTime @default(now())
 
   lote Lote @relation(fields: [loteId], references: [id], onDelete: Cascade)
+}
+
+/// Pesagem de um animal específico. Separada de `Pesagem`, que guarda a média
+/// do lote: aqui cada linha é o peso de um bicho, e é esse histórico que
+/// sustenta o GMD individual.
+///
+/// A última pesagem é o peso atual do animal — e, quando ele sai (venda,
+/// morte, transferência), é o peso de saída. Não existe coluna separada de
+/// "peso de saída" de propósito: seriam dois lugares para o mesmo número,
+/// livres para divergir.
+model PesagemAnimal {
+  id         String   @id @default(uuid())
+  animalId   String
+  data       DateTime
+  peso       Float // kg
+  observacao String?
+  createdAt  DateTime @default(now())
+
+  animal Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  // Sem empresaId: o escopo por fazenda vem do animal, como em Pesagem (que
+  // depende do lote).
+  @@index([animalId, data])
 }
 
 model Gasto {
