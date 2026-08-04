@@ -55,6 +55,8 @@ export async function remover(empresaId: string, id: string) {
   if (emUsoNoHistorico) {
     throw new ConflictException(['Este método já foi usado por algum lote (aparece no histórico) e não pode ser excluído.']);
   }
+  // Lido antes do delete só pra trilha de atividades ter o nome do método.
+  const metodo = await prisma.metodoManejo.findFirst({ where: { id, empresaId } });
   await prisma.metodoManejo.deleteMany({ where: { id, empresaId } });
-  return { ok: true };
+  return { ok: true, nome: metodo?.nome ?? null };
 }

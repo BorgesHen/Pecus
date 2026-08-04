@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ModuloSistema, NaturezaFinanceira, LABEL_NATUREZA_FINANCEIRA } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema, NaturezaFinanceira, LABEL_NATUREZA_FINANCEIRA } from '@pecus/shared';
 import {
   listarPlanoContas,
   criarGrupoFinanceiro,
@@ -12,6 +12,7 @@ import {
   removerContaFinanceira,
   type GrupoComContas,
 } from '@/lib/financeiro';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -110,7 +111,8 @@ export default function PlanoContasPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Plano de contas</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.PLANO_CONTAS} />
           <Link href="/financeiro" className="btn-secundario">
             ← Lançamentos
           </Link>

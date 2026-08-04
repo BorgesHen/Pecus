@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TipoMetodoManejo, LABEL_TIPO_METODO_MANEJO, type MetodoManejo } from '@pecus/shared';
+import { EntidadeAtividade, TipoMetodoManejo, LABEL_TIPO_METODO_MANEJO, type MetodoManejo } from '@pecus/shared';
 import { listarMetodosManejo, criarMetodoManejo, removerMetodoManejo } from '@/lib/lotes';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { useToast } from '@/contexts/ToastContext';
 
 export default function MetodosManejoPage() {
@@ -64,9 +65,12 @@ export default function MetodosManejoPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Métodos de manejo</h2>
-        <button className="btn" onClick={abrirModal}>
-          + Novo método
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.METODO_MANEJO} />
+          <button className="btn" onClick={abrirModal}>
+            + Novo método
+          </button>
+        </div>
       </div>
 
       <p style={{ color: 'var(--texto-suave)', marginBottom: 16, fontSize: 14 }}>

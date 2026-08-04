@@ -1,7 +1,8 @@
-import { ModuloSistema, NivelAcesso, type StatusAnimal } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema, NivelAcesso, type StatusAnimal } from '@pecus/shared';
 import { rota } from '@/server/rota';
 import { autorizar } from '@/server/autorizar';
 import { validarCorpo } from '@/server/validar';
+import { auditar } from '@/server/atividades/atividades.service';
 import * as animaisService from '@/server/animais/animais.service';
 import { CriarAnimalDto } from '@/server/animais/dto';
 
@@ -16,10 +17,16 @@ export const GET = rota(async (req) => {
 });
 
 export const POST = rota(async (req) => {
-  const { user } = await autorizar(req, {
+  const { user, empresaId } = await autorizar(req, {
     moduloAtivo: ModuloSistema.ANIMAIS,
     permissao: { modulo: ModuloSistema.ANIMAIS, nivel: NivelAcesso.EDITAR },
   });
   const dto = await validarCorpo(req, CriarAnimalDto);
-  return animaisService.criar(user.empresaAtivaId!, dto);
+  const animal = await animaisService.criar(empresaId, dto);
+  await auditar(user, empresaId).criacao(
+    EntidadeAtividade.ANIMAL,
+    animal.id,
+    `Animal ${animal.identificador} cadastrado`,
+  );
+  return animal;
 });

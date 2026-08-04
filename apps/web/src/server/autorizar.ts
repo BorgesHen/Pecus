@@ -48,11 +48,29 @@ const ORDEM_NIVEL: Record<NivelAcesso, number> = {
   [NivelAcesso.EDITAR]: 2,
 };
 
+interface Autorizacao<TEmpresa extends string | null> {
+  user: UsuarioAutenticado;
+  empresaId: TEmpresa;
+}
+
 /**
  * Substitui a cadeia RolesGuard → ModuloAtivoGuard → PermissoesGuard do NestJS.
  * Chamar sempre no início de cada handler (o JwtAuthGuard equivalente —
  * usuarioDoRequest — já roda por dentro, incondicionalmente).
+ *
+ * As duas assinaturas abaixo colocam no tipo a garantia que o `semEmpresa`
+ * descreve: sem ele, `empresaId` é `string` — se não houvesse fazenda ativa a
+ * função teria lançado antes de retornar. Só as rotas globais recebem
+ * `string | null` e precisam tratar o nulo.
  */
+export async function autorizar(
+  req: Request,
+  opcoes?: OpcoesAutorizacao & { semEmpresa?: false },
+): Promise<Autorizacao<string>>;
+export async function autorizar(
+  req: Request,
+  opcoes: OpcoesAutorizacao & { semEmpresa: true },
+): Promise<Autorizacao<string | null>>;
 export async function autorizar(req: Request, opcoes: OpcoesAutorizacao = {}) {
   const user = usuarioDoRequest(req);
 

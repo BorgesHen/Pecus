@@ -164,6 +164,9 @@ export async function atualizarPermissoes(empresaId: string, usuarioId: string, 
   return prisma.usuarioEmpresa.update({
     where: { usuarioId_empresaId: { usuarioId, empresaId } },
     data: { permissoes: dto.permissoes },
+    // Nome incluído pra trilha de atividades poder dizer de quem eram as
+    // permissões, em vez de registrar um id.
+    include: { usuario: { select: { nome: true, usuario: true } } },
   });
 }
 
@@ -206,8 +209,14 @@ export async function atualizarInfo(empresaId: string, usuarioId: string, dto: A
 
 /** Remove o vínculo do usuário com a empresa (não apaga a conta dele). */
 export async function removerDaEmpresa(empresaId: string, usuarioId: string) {
+  // Lido antes de apagar pra trilha de atividades poder dizer de quem era o
+  // acesso. Segue tolerante a vínculo inexistente, como antes.
+  const vinculo = await prisma.usuarioEmpresa.findUnique({
+    where: { usuarioId_empresaId: { usuarioId, empresaId } },
+    include: { usuario: { select: { nome: true, usuario: true } } },
+  });
   await prisma.usuarioEmpresa.deleteMany({ where: { empresaId, usuarioId } });
-  return { ok: true };
+  return { ok: true, usuario: vinculo?.usuario ?? null };
 }
 
 /**

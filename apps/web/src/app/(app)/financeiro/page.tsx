@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   NaturezaFinanceira,
   LABEL_NATUREZA_FINANCEIRA,
@@ -26,6 +27,7 @@ import {
 import { hojeISO } from '@/lib/data';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import type { ContaBancaria, Contato } from '@pecus/shared';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -170,7 +172,8 @@ export default function FinanceiroPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Financeiro</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.LANCAMENTO} />
           <Link href="/financeiro/plano-contas" className="btn-secundario">
             Plano de contas
           </Link>

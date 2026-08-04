@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ModuloSistema, TipoContato, LABEL_TIPO_CONTATO } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema, TipoContato, LABEL_TIPO_CONTATO } from '@pecus/shared';
 import {
   listarBancos,
   criarBanco,
@@ -15,6 +15,7 @@ import {
   type NovoContato,
 } from '@/lib/financeiro';
 import type { ContaBancaria, Contato } from '@pecus/shared';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -128,9 +129,12 @@ export default function ContatosBancosPage() {
 
       <div className="topo-tela" style={{ marginTop: 8 }}>
         <h3>Bancos</h3>
-        <button className="btn" onClick={() => setModalBancoAberto(true)} disabled={!podeEditarFinanceiro}>
-          + Novo banco
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.CONTA_BANCARIA} titulo="Histórico — Bancos" />
+          <button className="btn" onClick={() => setModalBancoAberto(true)} disabled={!podeEditarFinanceiro}>
+            + Novo banco
+          </button>
+        </div>
       </div>
 
       {!bancos && !erro && <p>Carregando...</p>}
@@ -181,9 +185,12 @@ export default function ContatosBancosPage() {
 
       <div className="topo-tela">
         <h3>Contatos</h3>
-        <button className="btn" onClick={() => setModalContatoAberto(true)} disabled={!podeEditarFinanceiro}>
-          + Novo contato
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.CONTATO} titulo="Histórico — Contatos" />
+          <button className="btn" onClick={() => setModalContatoAberto(true)} disabled={!podeEditarFinanceiro}>
+            + Novo contato
+          </button>
+        </div>
       </div>
 
       {!contatos && !erro && <p>Carregando...</p>}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   TIPOS_METODO_A_PASTO,
   EspecieAnimal,
@@ -21,6 +22,7 @@ import {
   type NovoLote,
 } from '@/lib/lotes';
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -162,6 +164,7 @@ export default function LotesPage() {
       <div className="topo-tela">
         <h2>Lotes</h2>
         <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.LOTE} />
           <button className="btn-secundario" onClick={abrirSimulador} disabled={!podeEditarLotes}>
             Simular compra
           </button>

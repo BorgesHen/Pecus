@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   NivelAcesso,
   PapelUsuario,
@@ -23,6 +24,7 @@ import { ApiError } from '@/lib/api';
 import { KeyRound, Mail, MailCheck } from 'lucide-react';
 import { PopupErro } from '@/components/PopupErro';
 import { PopupCredenciais } from '@/components/PopupCredenciais';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
@@ -245,9 +247,12 @@ export default function UsuariosPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Usuários</h2>
-        <button className="btn" onClick={abrirNovo}>
-          + Novo usuário
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.USUARIO} />
+          <button className="btn" onClick={abrirNovo}>
+            + Novo usuário
+          </button>
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}

@@ -15,6 +15,7 @@ import type { CriarEventoSanitarioDto, AplicarEmMassaDto } from './dto';
 async function garantirAnimalDaEmpresa(empresaId: string, animalId: string) {
   const animal = await prisma.animal.findFirst({ where: { id: animalId, empresaId } });
   if (!animal) throw new NotFoundException('Animal não encontrado nesta empresa.');
+  return animal;
 }
 
 export function listarPorAnimal(empresaId: string, animalId: string) {
@@ -22,10 +23,10 @@ export function listarPorAnimal(empresaId: string, animalId: string) {
 }
 
 export async function criar(empresaId: string, dtoOriginal: CriarEventoSanitarioDto) {
-  await garantirAnimalDaEmpresa(empresaId, dtoOriginal.animalId);
+  const animal = await garantirAnimalDaEmpresa(empresaId, dtoOriginal.animalId);
   const camposDesativados = await obterCamposDesativados(empresaId);
   const dto = removerCamposDesativados(dtoOriginal, 'sanidade', camposDesativados);
-  return prisma.eventoSanitario.create({
+  const evento = await prisma.eventoSanitario.create({
     data: {
       empresaId,
       animalId: dto.animalId,
@@ -38,6 +39,9 @@ export async function criar(empresaId: string, dtoOriginal: CriarEventoSanitario
       observacao: dto.observacao,
     },
   });
+  // O identificador do animal acompanha o evento pra trilha de atividades
+  // registrar "Vacina em 123" em vez de um id opaco.
+  return { ...evento, animalIdentificador: animal.identificador };
 }
 
 /** Aplica o mesmo evento em todos os animais ativos de um lote, ou numa lista explícita de animais. */

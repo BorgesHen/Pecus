@@ -79,7 +79,18 @@
       "Bash(node shot-icones.js)",
       "Bash(cp /tmp/render-icone.mjs ./_ri.mjs)",
       "Bash(node ./_ri.mjs)",
-      "Bash(rm -f ./_ri.mjs)"
+      "Bash(rm -f ./_ri.mjs)",
+      "Bash(npx eslint *)",
+      "Bash(NEXT_DIST_DIR=.next-claude npm run build --workspace=apps/web)",
+      "Bash(node /private/tmp/claude-501/-Users-sollucao-Downloads-pecus/26161e7d-3159-451e-bfbe-4e5881ac888f/scratchpad/setup-atividades.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3043/login)",
+      "Bash(node testa-atividades.js)",
+      "Bash(node ui-atividades.js)",
+      "Bash(npm init *)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(python3 -)",
+      "Bash(echo \"--- exit=$? ---\")"
     ],
     "additionalDirectories": [
       "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"

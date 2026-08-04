@@ -98,7 +98,7 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarAni
   const { idadeMeses, ...camposDoBanco } = dto;
   const dataEntradaISO = animal.dataEntrada.toISOString().slice(0, 10);
 
-  return prisma.animal.update({
+  const atualizado = await prisma.animal.update({
     where: { id },
     data: {
       ...camposDoBanco,
@@ -109,6 +109,17 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarAni
           : undefined,
     },
   });
+
+  return {
+    ...atualizado,
+    // Extra só pra trilha de atividades: trocar o animal de lote é uma
+    // movimentação de rebanho, não uma edição qualquer, e os dois nomes já
+    // estão em mãos aqui (depois do update o lote antigo se perde).
+    movimentacaoDeLote:
+      loteDestino && loteDestino.id !== animal.loteId
+        ? { de: animal.lote?.identificacao ?? null, para: loteDestino.identificacao }
+        : null,
+  };
 }
 
 export async function darSaida(empresaId: string, id: string, dto: DarSaidaAnimalDto) {

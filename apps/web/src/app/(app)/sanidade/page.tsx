@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   TipoEventoSanitario,
   LABEL_TIPO_EVENTO_SANITARIO,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/sanidade';
 import { listarAnimais, type AnimalComLote } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
@@ -138,13 +140,16 @@ export default function SanidadePage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Sanidade</h2>
-        <button
-          className="btn"
-          onClick={abrirModal}
-          disabled={!podeEditarSanidade || (animais.length === 0 && lotes.length === 0)}
-        >
-          + Novo evento
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.EVENTO_SANITARIO} />
+          <button
+            className="btn"
+            onClick={abrirModal}
+            disabled={!podeEditarSanidade || (animais.length === 0 && lotes.length === 0)}
+          >
+            + Novo evento
+          </button>
+        </div>
       </div>
 
       {avisoAtivo ? (

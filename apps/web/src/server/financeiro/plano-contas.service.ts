@@ -76,11 +76,12 @@ export async function atualizarGrupo(empresaId: string, id: string, dto: Atualiz
 }
 
 export async function removerGrupo(empresaId: string, id: string) {
-  await garantirGrupoDaEmpresa(empresaId, id);
+  const grupo = await garantirGrupoDaEmpresa(empresaId, id);
   const contas = await prisma.contaFinanceira.count({ where: { grupoId: id } });
   if (contas > 0) throw new BadRequestException('Remova ou mova as contas deste grupo antes de excluí-lo.');
   await prisma.grupoFinanceiro.delete({ where: { id } });
-  return { ok: true };
+  // Código e nome voltam pra trilha de atividades registrar o que foi excluído.
+  return { ok: true, codigo: grupo.codigo, nome: grupo.nome };
 }
 
 export async function criarConta(empresaId: string, dto: CriarContaFinanceiraDto) {
@@ -94,9 +95,9 @@ export async function atualizarConta(empresaId: string, id: string, dto: Atualiz
 }
 
 export async function removerConta(empresaId: string, id: string) {
-  await garantirContaDaEmpresa(empresaId, id);
+  const conta = await garantirContaDaEmpresa(empresaId, id);
   const lancamentos = await prisma.lancamento.count({ where: { contaId: id } });
   if (lancamentos > 0) throw new BadRequestException('Esta conta já tem lançamentos vinculados — desative-a em vez de excluir.');
   await prisma.contaFinanceira.delete({ where: { id } });
-  return { ok: true };
+  return { ok: true, codigo: conta.codigo, nome: conta.nome };
 }

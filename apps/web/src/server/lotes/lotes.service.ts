@@ -146,12 +146,20 @@ export async function trocarMetodo(empresaId: string, id: string, dto: TrocarMet
     await tx.loteMetodoHistorico.create({
       data: { loteId: id, metodoManejoId: dto.metodoManejoId, dataInicio: dataTroca },
     });
-    return tx.lote.update({ where: { id }, data: { metodoManejoId: dto.metodoManejoId } });
+    // Inclui o método pra trilha de atividades poder registrar o nome da nova
+    // fase, e não só o id.
+    return tx.lote.update({
+      where: { id },
+      data: { metodoManejoId: dto.metodoManejoId },
+      include: { metodoManejo: true },
+    });
   });
 }
 
 export async function remover(empresaId: string, id: string) {
-  await detalhar(empresaId, id);
+  const lote = await detalhar(empresaId, id);
   await prisma.lote.delete({ where: { id } });
-  return { ok: true };
+  // Devolve a identificação porque depois do delete ninguém mais consegue
+  // descobrir qual lote era — é o que a trilha de atividades registra.
+  return { ok: true, identificacao: lote.identificacao };
 }

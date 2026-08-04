@@ -1,7 +1,8 @@
-import { ModuloSistema, NivelAcesso, type NaturezaFinanceira } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema, NivelAcesso, type NaturezaFinanceira } from '@pecus/shared';
 import { rota } from '@/server/rota';
 import { autorizar } from '@/server/autorizar';
 import { validarCorpo } from '@/server/validar';
+import { auditar, brl } from '@/server/atividades/atividades.service';
 import * as lancamentosService from '@/server/financeiro/lancamentos.service';
 import { CriarLancamentoDto } from '@/server/financeiro/dto/lancamento.dto';
 
@@ -21,10 +22,20 @@ export const GET = rota(async (req) => {
 });
 
 export const POST = rota(async (req) => {
-  const { user } = await autorizar(req, {
+  const { user, empresaId } = await autorizar(req, {
     moduloAtivo: ModuloSistema.FINANCEIRO,
     permissao: { modulo: ModuloSistema.FINANCEIRO, nivel: NivelAcesso.EDITAR },
   });
   const dto = await validarCorpo(req, CriarLancamentoDto);
-  return lancamentosService.criar(user.empresaAtivaId!, dto);
+  const parcelas = await lancamentosService.criar(empresaId, dto);
+  const parcelamento = parcelas.length > 1 ? ` em ${parcelas.length} parcelas` : '';
+  await auditar(user, empresaId).criacao(
+    EntidadeAtividade.LANCAMENTO,
+    // Parcelamento gera vários registros; o histórico aponta pra primeira
+    // parcela e guarda a lista completa nos detalhes.
+    parcelas[0]?.id ?? null,
+    `Lançamento "${dto.descricao ?? 'sem descrição'}" de ${brl(dto.valorTotal)}${parcelamento}`,
+    { parcelasIds: parcelas.map((p) => p.id), contaId: dto.contaId, loteId: dto.loteId ?? null },
+  );
+  return parcelas;
 });

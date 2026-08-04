@@ -99,7 +99,7 @@ export default function LandingPage() {
         <div className="landing-hero-overlay" />
         <div className="landing-hero-conteudo">
           <span className="landing-eyebrow landing-eyebrow--claro">Sistema de gestão rural</span>
-          <h1>Gestão completa da sua fazenda, do lote ao relatório.</h1>
+          <h1>Gestão completa da sua fazenda, do lote ao relatório</h1>
           <p className="landing-hero-subtitulo">
             O Pecus junta lotes, áreas, animais, sanidade, reprodução, estoque, gastos e financeiro num só
             lugar — pra você controlar o ganho de peso e o resultado da fazenda sem depender de planilha.

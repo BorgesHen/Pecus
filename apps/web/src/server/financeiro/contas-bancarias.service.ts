@@ -32,9 +32,10 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarCon
 }
 
 export async function remover(empresaId: string, id: string) {
-  await garantirContaBancariaDaEmpresa(empresaId, id);
+  const conta = await garantirContaBancariaDaEmpresa(empresaId, id);
   const lancamentos = await prisma.lancamento.count({ where: { contaBancariaId: id } });
   if (lancamentos > 0) throw new BadRequestException('Este banco já tem lançamentos vinculados — desative-o em vez de excluir.');
   await prisma.contaBancaria.delete({ where: { id } });
-  return { ok: true };
+  // O nome volta pra trilha de atividades poder registrar o que foi excluído.
+  return { ok: true, nome: conta.nome };
 }

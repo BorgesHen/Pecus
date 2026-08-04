@@ -16,3 +16,22 @@ export function brData(data?: string | Date | null): string {
   const iso = (data instanceof Date ? data.toISOString() : String(data)).slice(0, 10);
   return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR');
 }
+
+/**
+ * Formata data **e hora** de um instante real (`createdAt` e afins).
+ *
+ * Aqui a conversão de fuso é justamente o que se quer, ao contrário do
+ * `brData`: um registro gravado às 21h de Brasília tem que aparecer como 21h,
+ * e não como a meia-noite UTC do dia seguinte. Por isso não ancora nada — só
+ * converte pro fuso de quem está lendo.
+ */
+export function brDataHora(data?: string | Date | null): string {
+  if (!data) return '—';
+  return new Date(data).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

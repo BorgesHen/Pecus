@@ -8,6 +8,7 @@ import {
   ChartColumn,
   ChevronDown,
   Contact,
+  History,
   Landmark,
   Layers,
   LayoutDashboard,
@@ -99,6 +100,12 @@ const ITENS: ItemNav[] = [
     href: '/usuarios',
     label: 'Usuários',
     icone: Users,
+    papeis: [PapelUsuario.ADMIN, PapelUsuario.RESPONSAVEL],
+  },
+  {
+    href: '/atividades',
+    label: 'Atividades',
+    icone: History,
     papeis: [PapelUsuario.ADMIN, PapelUsuario.RESPONSAVEL],
   },
   {

@@ -23,9 +23,10 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarCon
 }
 
 export async function remover(empresaId: string, id: string) {
-  await garantirContatoDaEmpresa(empresaId, id);
+  const contato = await garantirContatoDaEmpresa(empresaId, id);
   const lancamentos = await prisma.lancamento.count({ where: { contatoId: id } });
   if (lancamentos > 0) throw new BadRequestException('Este contato já tem lançamentos vinculados — não pode ser excluído.');
   await prisma.contato.delete({ where: { id } });
-  return { ok: true };
+  // O nome volta pra trilha de atividades poder registrar o que foi excluído.
+  return { ok: true, nome: contato.nome };
 }

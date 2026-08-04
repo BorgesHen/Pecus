@@ -50,8 +50,13 @@ export async function criar(empresaId: string, dtoOriginal: CriarGastoDto) {
 }
 
 export async function remover(empresaId: string, id: string) {
+  // Lê antes de apagar pra devolver o que a trilha de atividades registra.
+  // Continua tolerante a id inexistente (mesmo comportamento de antes): quem
+  // clica em excluir duas vezes não recebe erro.
+  const gasto = await prisma.gasto.findFirst({ where: { id, empresaId } });
+  if (!gasto) return { ok: true, gasto: null };
   await prisma.gasto.deleteMany({ where: { id, empresaId } });
-  return { ok: true };
+  return { ok: true, gasto: { categoria: gasto.categoria, valor: Number(gasto.valor) } };
 }
 
 /** Categorias além das padrão que a empresa já cadastrou via "Outros" (categoria é texto livre). */

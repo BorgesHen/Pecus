@@ -29,7 +29,8 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarAre
 }
 
 export async function remover(empresaId: string, id: string) {
-  await detalhar(empresaId, id);
+  const area = await detalhar(empresaId, id);
   await prisma.area.delete({ where: { id } });
-  return { ok: true };
+  // O nome volta pra trilha de atividades poder registrar o que foi excluído.
+  return { ok: true, nome: area.nome };
 }

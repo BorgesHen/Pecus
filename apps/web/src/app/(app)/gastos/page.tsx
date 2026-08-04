@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CategoriaGasto, ModuloSistema } from '@pecus/shared';
+import { EntidadeAtividade, CategoriaGasto, ModuloSistema } from '@pecus/shared';
 import {
   listarGastos,
   criarGasto,
@@ -12,6 +12,7 @@ import {
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
 import type { Gasto } from '@pecus/shared';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
@@ -124,9 +125,12 @@ export default function GastosPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Gastos</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeEditarGastos}>
-          + Novo gasto
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.GASTO} />
+          <button className="btn" onClick={abrirModal} disabled={!podeEditarGastos}>
+            + Novo gasto
+          </button>
+        </div>
       </div>
 
       <div className="campo" style={{ maxWidth: 320 }}>

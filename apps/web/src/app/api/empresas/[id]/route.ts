@@ -1,7 +1,8 @@
-import { PapelUsuario } from '@pecus/shared';
+import { EntidadeAtividade, PapelUsuario } from '@pecus/shared';
 import { rota } from '@/server/rota';
 import { autorizar } from '@/server/autorizar';
 import { validarCorpo } from '@/server/validar';
+import { auditar } from '@/server/atividades/atividades.service';
 import * as empresasService from '@/server/empresas/empresas.service';
 import { AtualizarEmpresaDto } from '@/server/empresas/dto';
 
@@ -12,7 +13,14 @@ export const GET = rota(async (req, { params }) => {
 
 // Editar dados da própria fazenda: responsável pode
 export const PATCH = rota(async (req, { params }) => {
-  await autorizar(req, { papeis: [PapelUsuario.RESPONSAVEL], semEmpresa: true });
+  const { user } = await autorizar(req, { papeis: [PapelUsuario.RESPONSAVEL], semEmpresa: true });
   const dto = await validarCorpo(req, AtualizarEmpresaDto);
-  return empresasService.atualizar(params.id, dto);
+  const empresa = await empresasService.atualizar(params.id, dto);
+  await auditar(user, params.id).atualizacao(
+    EntidadeAtividade.FAZENDA,
+    params.id,
+    `Dados da fazenda "${empresa.nome}" editados`,
+    { camposAlterados: Object.keys(dto) },
+  );
+  return empresa;
 });

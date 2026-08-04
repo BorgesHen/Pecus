@@ -111,7 +111,7 @@ enum TipoContato {
 model Empresa {
   id        String   @id @default(uuid())
   nome      String
-  documento String?  // CPF ou CNPJ
+  documento String? // CPF ou CNPJ
   createdAt DateTime @default(now())
 
   // Módulos ativos/inativos pra esta fazenda (painel de configuração).
@@ -128,8 +128,8 @@ model Empresa {
   moduloFinanceiroAtivo    Boolean @default(true)
 
   // Valores-padrão configuráveis pela fazenda.
-  rendimentoCarcacaPadrao    Float @default(52)
-  sanidadeDiasAvisoVencimento Int  @default(7)
+  rendimentoCarcacaPadrao     Float @default(52)
+  sanidadeDiasAvisoVencimento Int   @default(7)
   /// Altura ideal do capim (cm) pra mover o gado pra um piquete, se ele não tiver override próprio.
   alturaIdealPastoPadrao      Float @default(60)
 
@@ -161,20 +161,21 @@ model Empresa {
   climaLatitude  Float?
   climaLongitude Float?
 
-  usuarios      UsuarioEmpresa[]
-  lotes         Lote[]
-  areas         Area[]
-  gastos        Gasto[]
-  metodosManejo MetodoManejo[]
-  animais       Animal[]
-  eventosSanitarios EventoSanitario[]
+  usuarios            UsuarioEmpresa[]
+  lotes               Lote[]
+  areas               Area[]
+  gastos              Gasto[]
+  metodosManejo       MetodoManejo[]
+  animais             Animal[]
+  eventosSanitarios   EventoSanitario[]
   eventosReprodutivos EventoReprodutivo[]
-  insumos Insumo[]
-  movimentosInsumo MovimentoInsumo[]
-  gruposFinanceiros GrupoFinanceiro[]
-  contasBancarias   ContaBancaria[]
-  contatos          Contato[]
-  lancamentos       Lancamento[]
+  insumos             Insumo[]
+  movimentosInsumo    MovimentoInsumo[]
+  gruposFinanceiros   GrupoFinanceiro[]
+  contasBancarias     ContaBancaria[]
+  contatos            Contato[]
+  lancamentos         Lancamento[]
+  atividades          RegistroAtividade[]
 }
 
 /// Convite de acesso: uma fazenda nova só consegue se cadastrar (/auth/registrar)
@@ -203,32 +204,32 @@ model TentativaLogin {
 }
 
 model Usuario {
-  id        String   @id @default(uuid())
-  nome      String
-  email     String   @unique
+  id          String       @id @default(uuid())
+  nome        String
+  email       String       @unique
   /// Usado para login (em vez do e-mail). Ex: "joao.silva"
-  usuario   String   @unique
-  senhaHash String
+  usuario     String       @unique
+  senhaHash   String
   /// Papel global. Só ADMIN é global (suporte do sistema).
   /// Para RESPONSAVEL/USUARIO o papel real vem de UsuarioEmpresa.
   papelGlobal PapelUsuario @default(USUARIO)
-  createdAt DateTime @default(now())
+  createdAt   DateTime     @default(now())
 
   // ----- Ciclo de vida da senha -----
   // Conta criada pelo responsável (ou senha resetada) nasce com senha
   // provisória: entra no sistema, mas o app só libera as telas depois que a
   // pessoa define a senha dela. Assim o responsável nunca conhece a senha
   // definitiva de ninguém.
-  senhaProvisoria Boolean @default(false)
+  senhaProvisoria                Boolean   @default(false)
   /// Provisória tem prazo. Vencida, o login é recusado e a pessoa pede outra
   /// pela tela de login ("Esqueci minha senha").
-  senhaProvisoriaExpiraEm DateTime?
+  senhaProvisoriaExpiraEm        DateTime?
   /// A provisória saiu por e-mail (e não copiada à mão pelo responsável). É o
   /// que permite tratar a troca de senha como prova de que o e-mail existe.
-  senhaProvisoriaEnviadaPorEmail Boolean @default(false)
+  senhaProvisoriaEnviadaPorEmail Boolean   @default(false)
   /// Preenchido quando a pessoa define a senha a partir de uma provisória que
   /// chegou por e-mail — ou seja, ela recebeu a mensagem naquele endereço.
-  emailVerificadoEm DateTime?
+  emailVerificadoEm              DateTime?
 
   empresas UsuarioEmpresa[]
 }
@@ -256,13 +257,13 @@ model MetodoManejo {
   empresaId String?
   tipo      TipoMetodoManejo @default(NAO_DEFINIDO)
 
-  empresa    Empresa?               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa    Empresa?              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   lotes      Lote[]
   historicos LoteMetodoHistorico[]
 }
 
 model Lote {
-  id                String   @id @default(uuid())
+  id                String        @id @default(uuid())
   empresaId         String
   metodoManejoId    String?
   areaId            String?
@@ -271,7 +272,7 @@ model Lote {
   especie           EspecieAnimal @default(BOVINO)
   dataAquisicao     DateTime
   quantidadeAnimais Int
-  pesoMedioEntrada  Float?   // kg
+  pesoMedioEntrada  Float? // kg
   /// % que vira carcaça. Se nulo, usa o padrão da espécie (bovino 52, ovino 45).
   rendimentoCarcaca Float?
 
@@ -282,16 +283,16 @@ model Lote {
   // o gado entra na pastagem são eventos diferentes (a planilha do produtor tem
   // as duas colunas), então corrigir um não pode mexer no custo do outro.
   // Frete e comissão ficam sempre por cabeça (rateados), como na planilha.
-  pesoMedioCompra   Float?   // kg
-  valorKgCompra     Float?   // R$/kg negociado
-  fretePorCabeca    Float?   // R$
-  comissaoPorCabeca Float?   // R$
-  gmdEsperado       Float?   // kg/dia — meta de referência p/ comparar com o GMD real
+  pesoMedioCompra   Float? // kg
+  valorKgCompra     Float? // R$/kg negociado
+  fretePorCabeca    Float? // R$
+  comissaoPorCabeca Float? // R$
+  gmdEsperado       Float? // kg/dia — meta de referência p/ comparar com o GMD real
   createdAt         DateTime @default(now())
 
-  empresa         Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  metodoManejo    MetodoManejo?          @relation(fields: [metodoManejoId], references: [id])
-  area            Area?                  @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  empresa         Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  metodoManejo    MetodoManejo?         @relation(fields: [metodoManejoId], references: [id])
+  area            Area?                 @relation(fields: [areaId], references: [id], onDelete: SetNull)
   pesagens        Pesagem[]
   gastos          Gasto[]
   metodoHistorico LoteMetodoHistorico[]
@@ -371,9 +372,9 @@ model Animal {
   observacao     String?
   createdAt      DateTime        @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lote    Lote?   @relation(fields: [loteId], references: [id])
-  eventosSanitarios EventoSanitario[]
+  empresa             Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lote                Lote?               @relation(fields: [loteId], references: [id])
+  eventosSanitarios   EventoSanitario[]
   eventosReprodutivos EventoReprodutivo[] @relation("EventoReprodutivoAnimal")
   nascimentosComoCria EventoReprodutivo[] @relation("EventoReprodutivoCria")
 
@@ -403,19 +404,19 @@ model EventoSanitario {
 /// Evento reprodutivo ligado à matriz/touro (animalId). Quando tipo = PARTO e a
 /// cria já foi cadastrada como Animal, criaId aponta pra ela.
 model EventoReprodutivo {
-  id         String                @id @default(uuid())
-  empresaId  String
-  animalId   String
-  tipo       TipoEventoReprodutivo
-  data       DateTime
-  resultado  String?
+  id          String                @id @default(uuid())
+  empresaId   String
+  animalId    String
+  tipo        TipoEventoReprodutivo
+  data        DateTime
+  resultado   String?
   /// Primeira cria do parto. Em parto múltiplo (comum em ovinos) as demais
   /// crias são cadastradas como Animal e contabilizadas em numeroCrias.
-  criaId     String?
+  criaId      String?
   /// Nº de crias nascidas — base da prolificidade (crias por parto).
   numeroCrias Int?
-  observacao String?
-  createdAt  DateTime              @default(now())
+  observacao  String?
+  createdAt   DateTime              @default(now())
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   animal  Animal  @relation("EventoReprodutivoAnimal", fields: [animalId], references: [id], onDelete: Cascade)
@@ -449,18 +450,18 @@ model Gasto {
   id         String   @id @default(uuid())
   empresaId  String
   loteId     String?
-  insumoId   String?  // se informado, o valor lançado dá entrada no estoque desse insumo
+  insumoId   String? // se informado, o valor lançado dá entrada no estoque desse insumo
   categoria  String
   descricao  String?
   valor      Decimal  @db.Decimal(12, 2)
-  quantidade Float?   // ex: litros, sacos, kg
-  unidade    String?  // ex: "L", "kg", "saco"
+  quantidade Float? // ex: litros, sacos, kg
+  unidade    String? // ex: "L", "kg", "saco"
   data       DateTime
   createdAt  DateTime @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lote    Lote?   @relation(fields: [loteId], references: [id])
-  insumo  Insumo? @relation(fields: [insumoId], references: [id])
+  empresa          Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  lote             Lote?             @relation(fields: [loteId], references: [id])
+  insumo           Insumo?           @relation(fields: [insumoId], references: [id])
   movimentosInsumo MovimentoInsumo[]
 }
 
@@ -583,4 +584,59 @@ model Lancamento {
 
   @@index([empresaId, dataDocumento])
   @@index([empresaId, dataLiquidacao])
+}
+
+/// Tipo de ação registrada na trilha de atividades.
+///
+/// MOVIMENTACAO existe separada de ATUALIZACAO porque é o que o produtor
+/// procura no dia a dia: gado que trocou de piquete, animal que saiu do
+/// rebanho, insumo que entrou ou saiu do estoque, parcela liquidada. Tudo isso
+/// é tecnicamente um UPDATE, mas ninguém abre o log pra ver "um UPDATE".
+enum AcaoAtividade {
+  CRIACAO
+  ATUALIZACAO
+  EXCLUSAO
+  MOVIMENTACAO
+}
+
+/// Trilha de auditoria da fazenda: quem fez o quê e quando. Alimenta a tela
+/// "Atividades" e os botões de "Histórico" espalhados pelo sistema.
+///
+/// A tabela só recebe INSERT — o app nunca edita nem apaga linha daqui, senão
+/// o log deixaria de servir como registro do que aconteceu. É também por isso
+/// que a descrição vem pronta e o autor fica copiado: o registro de origem
+/// pode não existir mais (é justamente o caso das exclusões) e a conta do
+/// autor pode ter saído da fazenda.
+model RegistroAtividade {
+  id         String        @id @default(uuid())
+  empresaId  String
+  acao       AcaoAtividade
+  /// Que tipo de registro foi afetado — valores de EntidadeAtividade
+  /// (packages/shared). String, e não enum, pra que um módulo novo apareça no
+  /// log sem precisar de migration.
+  entidade   String
+  /// Id do registro afetado. É o que o botão "Histórico" das telas de detalhe
+  /// usa pra filtrar. Nulo quando a ação não tem um registro único (ex:
+  /// aplicação sanitária em massa, alteração das configurações da fazenda).
+  registroId String?
+  /// Texto pronto pra ler: "Lote 25/26 A excluído".
+  descricao  String
+  /// Complemento opcional (campos alterados, quantidades). Nunca guarda senha,
+  /// hash ou token.
+  detalhes   Json?
+
+  /// Quem fez. Sem relação com Usuario de propósito: se a conta for removida
+  /// da fazenda, o log tem que continuar dizendo quem foi.
+  autorId    String?
+  autorNome  String
+  autorEmail String?
+
+  createdAt DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, createdAt])
+  @@index([empresaId, entidade, createdAt])
+  @@index([empresaId, entidade, registroId])
+  @@index([empresaId, acao, createdAt])
 }

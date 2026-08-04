@@ -14,8 +14,13 @@ export async function listarPorLote(empresaId: string, loteId: string) {
 }
 
 export async function criar(empresaId: string, dto: CriarPesagemDto) {
-  await garantirLoteDaEmpresa(empresaId, dto.loteId);
-  return prisma.pesagem.create({ data: { loteId: dto.loteId, data: new Date(dto.data), pesoMedio: dto.pesoMedio } });
+  const lote = await garantirLoteDaEmpresa(empresaId, dto.loteId);
+  const pesagem = await prisma.pesagem.create({
+    data: { loteId: dto.loteId, data: new Date(dto.data), pesoMedio: dto.pesoMedio },
+  });
+  // A identificação do lote acompanha a pesagem pra trilha de atividades não
+  // precisar de outra consulta pra escrever a linha do histórico.
+  return { ...pesagem, loteIdentificacao: lote.identificacao };
 }
 
 /** Ganho Médio Diário (GMD) do lote com base na primeira e última pesagem (ou peso de entrada, se houver). */

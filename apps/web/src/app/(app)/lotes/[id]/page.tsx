@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   LABEL_TIPO_METODO_MANEJO,
   TIPOS_METODO_A_PASTO,
@@ -26,6 +27,7 @@ import { criarPesagem, obterGmd, type Gmd } from '@/lib/pesagens';
 import { hojeISO } from '@/lib/data';
 import { indicadoresMetodo, type IndicadoresMetodo } from '@/lib/relatorios';
 import { listarAnimais } from '@/lib/animais';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
@@ -233,9 +235,19 @@ export default function DetalheLotePage() {
 
       <div className="topo-tela">
         <h2>{lote.identificacao}</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeRegistrarPesagem}>
-          + Nova pesagem
-        </button>
+        <div className="acoes-celula">
+          {/* "Alterações" no rótulo porque a tela já tem outros históricos
+              (pesagens, método de manejo) — aqui é a trilha de quem mexeu. */}
+          <BotaoHistorico
+            entidade={EntidadeAtividade.LOTE}
+            registroId={lote.id}
+            rotulo="Alterações"
+            titulo={`Histórico do lote ${lote.identificacao}`}
+          />
+          <button className="btn" onClick={abrirModal} disabled={!podeRegistrarPesagem}>
+            + Nova pesagem
+          </button>
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}

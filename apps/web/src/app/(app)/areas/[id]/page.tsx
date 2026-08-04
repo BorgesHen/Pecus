@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ModuloSistema, type RegistroAlturaPasto } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema, type RegistroAlturaPasto } from '@pecus/shared';
 import { obterArea, atualizarArea, type AreaDetalhada } from '@/lib/areas';
 import { hojeISO } from '@/lib/data';
 import {
@@ -15,6 +15,7 @@ import {
   moverGadoParaPiquete,
   type PiqueteComStatus,
 } from '@/lib/piquetes';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -217,9 +218,16 @@ export default function DetalheAreaPage() {
 
       <div className="topo-tela">
         <h2>{area.nome}</h2>
-        <button className="btn-secundario" onClick={abrirModalParametros} disabled={!podeEditarAreas}>
-          Editar
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico
+            entidade={EntidadeAtividade.AREA}
+            registroId={area.id}
+            titulo={`Histórico da área ${area.nome}`}
+          />
+          <button className="btn-secundario" onClick={abrirModalParametros} disabled={!podeEditarAreas}>
+            Editar
+          </button>
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}
@@ -263,9 +271,14 @@ export default function DetalheAreaPage() {
 
       <div className="topo-tela">
         <h3>Piquetes</h3>
-        <button className="btn-secundario" onClick={abrirModalNovoPiquete} disabled={!podeEditarPiquetes}>
-          + Novo piquete
-        </button>
+        <div className="acoes-celula">
+          {/* É aqui que se procura "quem mudou o gado de piquete" e as medições
+              de altura do pasto. */}
+          <BotaoHistorico entidade={EntidadeAtividade.PIQUETE} titulo="Histórico dos piquetes" />
+          <button className="btn-secundario" onClick={abrirModalNovoPiquete} disabled={!podeEditarPiquetes}>
+            + Novo piquete
+          </button>
+        </div>
       </div>
 
       {!piquetes && !erro && <p>Carregando...</p>}

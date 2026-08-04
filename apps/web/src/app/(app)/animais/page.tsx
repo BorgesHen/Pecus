@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   SexoAnimal,
   CategoriaAnimal,
@@ -24,6 +25,7 @@ import {
 import { listarAnimais, criarAnimal, type AnimalComLote, type NovoAnimal } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { brData, hojeISO } from '@/lib/data';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -153,9 +155,12 @@ export default function AnimaisPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Animais</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeEditarAnimais || lotes.length === 0}>
-          + Novo animal
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.ANIMAL} />
+          <button className="btn" onClick={abrirModal} disabled={!podeEditarAnimais || lotes.length === 0}>
+            + Novo animal
+          </button>
+        </div>
       </div>
 
       <div className="linha-campos">

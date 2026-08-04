@@ -147,7 +147,17 @@ export async function liquidar(empresaId: string, id: string, dto: LiquidarLanca
 }
 
 export async function remover(empresaId: string, id: string) {
-  await garantirLancamentoDaEmpresa(empresaId, id);
+  const lancamento = await garantirLancamentoDaEmpresa(empresaId, id);
   await prisma.lancamento.delete({ where: { id } });
-  return { ok: true };
+  // Descrição e valor voltam pra trilha de atividades poder dizer qual
+  // lançamento saiu — depois do delete não há mais como descobrir.
+  return {
+    ok: true,
+    lancamento: {
+      descricao: lancamento.descricao,
+      valorParcela: Number(lancamento.valorParcela),
+      numeroParcela: lancamento.numeroParcela,
+      totalParcelas: lancamento.totalParcelas,
+    },
+  };
 }

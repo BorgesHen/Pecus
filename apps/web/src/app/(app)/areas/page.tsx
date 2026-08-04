@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ModuloSistema } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema } from '@pecus/shared';
 import { listarAreas, criarArea, removerArea, type AreaComContagem, type NovaArea } from '@/lib/areas';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
@@ -75,9 +76,12 @@ export default function AreasPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Áreas</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeEditarAreas}>
-          + Nova área
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.AREA} />
+          <button className="btn" onClick={abrirModal} disabled={!podeEditarAreas}>
+            + Nova área
+          </button>
+        </div>
       </div>
 
       <p style={{ color: 'var(--texto-suave)', marginBottom: 20, fontSize: 14 }}>

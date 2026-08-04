@@ -66,7 +66,7 @@ export async function criar(empresaId: string, dtoOriginal: CriarEventoReproduti
       );
     }
 
-    return tx.eventoReprodutivo.create({
+    const evento = await tx.eventoReprodutivo.create({
       data: {
         empresaId,
         animalId: dto.animalId,
@@ -80,6 +80,14 @@ export async function criar(empresaId: string, dtoOriginal: CriarEventoReproduti
         numeroCrias,
       },
     });
+
+    // Identificador da mãe e crias cadastradas acompanham o evento pra trilha
+    // de atividades registrar o parto por inteiro numa linha legível.
+    return {
+      ...evento,
+      animalIdentificador: mae.identificador,
+      criasCadastradas: criasCriadas.map((c) => c.identificador),
+    };
   });
 }
 

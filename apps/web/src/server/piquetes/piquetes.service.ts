@@ -56,16 +56,20 @@ export async function atualizar(empresaId: string, id: string, dto: AtualizarPiq
 }
 
 export async function remover(empresaId: string, id: string) {
-  await garantirPiqueteDaEmpresa(empresaId, id);
+  const piquete = await garantirPiqueteDaEmpresa(empresaId, id);
   await prisma.piquete.delete({ where: { id } });
-  return { ok: true };
+  // O nome volta pra trilha de atividades poder registrar o que foi excluído.
+  return { ok: true, nome: piquete.nome };
 }
 
 export async function registrarAltura(empresaId: string, piqueteId: string, dto: RegistrarAlturaDto) {
-  await garantirPiqueteDaEmpresa(empresaId, piqueteId);
-  return prisma.registroAlturaPasto.create({
+  const piquete = await garantirPiqueteDaEmpresa(empresaId, piqueteId);
+  const registro = await prisma.registroAlturaPasto.create({
     data: { piqueteId, data: new Date(dto.data), alturaCm: dto.alturaCm },
   });
+  // O nome do piquete acompanha o registro pra trilha de atividades não
+  // precisar de outra consulta só pra escrever a linha do histórico.
+  return { ...registro, piqueteNome: piquete.nome };
 }
 
 export async function listarAlturas(empresaId: string, piqueteId: string) {
@@ -87,6 +91,9 @@ export async function moverGado(empresaId: string, piqueteId: string, dto: Mover
       }
       await tx.ocupacaoPiquete.update({ where: { id: ocupacaoAberta.id }, data: { dataFim: dataMovimento } });
     }
-    return tx.ocupacaoPiquete.create({ data: { piqueteId, dataInicio: dataMovimento } });
+    const ocupacao = await tx.ocupacaoPiquete.create({ data: { piqueteId, dataInicio: dataMovimento } });
+    // O nome do piquete acompanha o retorno pra trilha de atividades poder
+    // dizer pra onde o gado foi sem outra consulta.
+    return { ...ocupacao, piqueteNome: piqueteDestino.nome };
   });
 }

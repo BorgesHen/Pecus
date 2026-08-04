@@ -6,8 +6,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { PapelUsuario, type UsuarioAutenticado } from '@pecus/shared';
+import { EntidadeAtividade, PapelUsuario, type UsuarioAutenticado } from '@pecus/shared';
 import { prisma } from '../prisma';
+import { auditar } from '../atividades/atividades.service';
 import { assinarToken } from '../auth';
 import { criarPlanoContasPadrao } from '../financeiro/plano-contas.service';
 import * as convitesService from '../convites/convites.service';
@@ -82,6 +83,16 @@ export async function registrar(dto: RegistrarDto) {
     timeout: 20_000,
     maxWait: 10_000,
   });
+
+  // Primeira linha do histórico da fazenda. Fica aqui, e não na rota, porque
+  // /auth/registrar é público: não existe usuário autenticado ainda, o autor é
+  // justamente a conta que acabou de nascer.
+  const { usuario, empresa } = resultado;
+  await auditar({ id: usuario.id, nome: usuario.nome, email: usuario.email }, empresa.id).criacao(
+    EntidadeAtividade.FAZENDA,
+    empresa.id,
+    `Fazenda "${empresa.nome}" cadastrada`,
+  );
 
   return gerarToken(resultado.usuario, resultado.empresa.id);
 }

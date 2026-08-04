@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ModuloSistema } from '@pecus/shared';
+import { EntidadeAtividade, ModuloSistema } from '@pecus/shared';
 import {
   listarInsumos,
   criarInsumo,
@@ -10,6 +10,7 @@ import {
   type InsumoComSaldo,
   type NovoInsumo,
 } from '@/lib/insumos';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
@@ -117,9 +118,12 @@ export default function InsumosPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Estoque de insumos</h2>
-        <button className="btn" onClick={abrirModalNovo} disabled={!podeEditarEstoque}>
-          + Novo insumo
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.INSUMO} />
+          <button className="btn" onClick={abrirModalNovo} disabled={!podeEditarEstoque}>
+            + Novo insumo
+          </button>
+        </div>
       </div>
 
       <p style={{ color: 'var(--texto-suave)', marginBottom: 16, fontSize: 14 }}>

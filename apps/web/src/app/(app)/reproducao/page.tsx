@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   SexoAnimal,
   EspecieAnimal,
@@ -23,6 +24,7 @@ import {
   type IndicadoresReproducao,
 } from '@/lib/reproducao';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { hojeISO } from '@/lib/data';
@@ -139,9 +141,12 @@ export default function ReproducaoPage() {
     <div className="container">
       <div className="topo-tela">
         <h2>Reprodução</h2>
-        <button className="btn" onClick={abrirModal} disabled={!podeEditarReproducao || !matrizes?.length}>
-          + Novo evento
-        </button>
+        <div className="acoes-celula">
+          <BotaoHistorico entidade={EntidadeAtividade.EVENTO_REPRODUTIVO} />
+          <button className="btn" onClick={abrirModal} disabled={!podeEditarReproducao || !matrizes?.length}>
+            + Novo evento
+          </button>
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}

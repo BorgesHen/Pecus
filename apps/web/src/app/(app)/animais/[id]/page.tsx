@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
+  EntidadeAtividade,
   ModuloSistema,
   StatusAnimal,
   LABEL_SEXO_ANIMAL,
@@ -28,6 +29,7 @@ import {
   criarEventoReprodutivo,
   type EventoReprodutivoComCria,
 } from '@/lib/reproducao';
+import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { brData, hojeISO } from '@/lib/data';
@@ -176,15 +178,25 @@ export default function DetalheAnimalPage() {
 
       <div className="topo-tela">
         <h2>{animal.identificador}</h2>
-        {animal.status === StatusAnimal.ATIVO && (
-          <button
-            className="btn-secundario"
-            onClick={() => setModalSaidaAberto(true)}
-            disabled={!podeEditarAnimais}
-          >
-            Dar saída
-          </button>
-        )}
+        <div className="acoes-celula">
+          {/* "Alterações": a tela já tem "Histórico sanitário" e "Histórico
+              reprodutivo", então um botão só "Histórico" seria ambíguo. */}
+          <BotaoHistorico
+            entidade={EntidadeAtividade.ANIMAL}
+            registroId={animal.id}
+            rotulo="Alterações"
+            titulo={`Histórico do animal ${animal.identificador}`}
+          />
+          {animal.status === StatusAnimal.ATIVO && (
+            <button
+              className="btn-secundario"
+              onClick={() => setModalSaidaAberto(true)}
+              disabled={!podeEditarAnimais}
+            >
+              Dar saída
+            </button>
+          )}
+        </div>
       </div>
 
       {erro && <div className="erro">{erro}</div>}

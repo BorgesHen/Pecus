@@ -68,10 +68,13 @@ export function listarMovimentos(empresaId: string, insumoId: string) {
 }
 
 export async function registrarConsumo(empresaId: string, insumoId: string, dto: RegistrarConsumoDto) {
-  await detalhar(empresaId, insumoId);
-  return prisma.movimentoInsumo.create({
+  const insumo = await detalhar(empresaId, insumoId);
+  const movimento = await prisma.movimentoInsumo.create({
     data: { empresaId, insumoId, tipo: TipoMovimentoInsumo.SAIDA, quantidade: dto.quantidade, data: new Date(dto.data), observacao: dto.observacao },
   });
+  // Nome e unidade acompanham o movimento pra trilha de atividades escrever
+  // "20 kg de Sal mineral" sem uma consulta extra.
+  return { ...movimento, insumo: { nome: insumo.nome, unidade: insumo.unidade } };
 }
 
 /**
@@ -79,8 +82,9 @@ export async function registrarConsumo(empresaId: string, insumoId: string, dto:
  * por compra registrada (rastreável até o gasto) do que foi lançado à mão.
  */
 export async function registrarEntrada(empresaId: string, insumoId: string, dto: RegistrarEntradaDto) {
-  await detalhar(empresaId, insumoId);
-  return prisma.movimentoInsumo.create({
+  const insumo = await detalhar(empresaId, insumoId);
+  const movimento = await prisma.movimentoInsumo.create({
     data: { empresaId, insumoId, tipo: TipoMovimentoInsumo.ENTRADA, quantidade: dto.quantidade, data: new Date(dto.data), observacao: dto.observacao },
   });
+  return { ...movimento, insumo: { nome: insumo.nome, unidade: insumo.unidade } };
 }

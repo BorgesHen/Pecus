@@ -1842,3 +1842,130 @@ html:not(.js) .ao-aparecer {
 .landing-footer-conteudo a:hover {
   color: var(--verde);
 }
+
+/* ---------- Trilha de atividades (tela de Atividades e botões de Histórico) ---------- */
+
+.atividade-intro {
+  margin: -8px 0 16px;
+  color: var(--texto-suave);
+  font-size: 14px;
+  max-width: 70ch;
+}
+
+/* Os filtros se acomodam sozinhos: 6 campos numa tela larga, 1 por linha no
+   celular, sem media query. */
+.atividade-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.atividade-filtros .campo {
+  margin-bottom: 0;
+}
+
+.atividade-contagem {
+  margin-bottom: 10px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+
+.atividade-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.atividade-item {
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  /* Barra lateral neutra por padrão; cada ação pinta a sua abaixo, o que dá
+     pra varrer a coluna inteira com o olho sem ler as etiquetas. */
+  border-left: 3px solid var(--borda);
+}
+.atividade-item-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.atividade-modulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--texto-suave);
+}
+.atividade-quando {
+  /* Empurrado pra direita: a data é referência, não o assunto da linha. */
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+.atividade-descricao {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.atividade-autor {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+.atividade-campos {
+  overflow-wrap: anywhere;
+}
+
+.atividade-selo {
+  font-weight: 500;
+}
+.atividade-selo--criacao {
+  background: rgba(47, 93, 58, 0.12);
+  color: var(--verde);
+}
+.atividade-selo--atualizacao {
+  background: rgba(43, 90, 138, 0.12);
+  color: #2b5a8a;
+}
+.atividade-selo--exclusao {
+  background: rgba(178, 59, 59, 0.12);
+  color: var(--erro);
+}
+.atividade-selo--movimentacao {
+  background: rgba(180, 83, 9, 0.12);
+  color: #8a3f07;
+}
+
+.atividade-item:has(.atividade-selo--criacao) {
+  border-left-color: var(--verde);
+}
+.atividade-item:has(.atividade-selo--atualizacao) {
+  border-left-color: #2b5a8a;
+}
+.atividade-item:has(.atividade-selo--exclusao) {
+  border-left-color: var(--erro);
+}
+.atividade-item:has(.atividade-selo--movimentacao) {
+  border-left-color: #b45309;
+}
+
+.atividade-vazio {
+  padding: 20px 0;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+.atividade-mais {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* Dentro do modal a lista precisa de teto próprio, senão o histórico longo
+   empurra o botão Fechar pra fora da área visível. */
+.modal .atividade-lista {
+  max-height: 46vh;
+  overflow-y: auto;
+  margin-top: 4px;
+}
