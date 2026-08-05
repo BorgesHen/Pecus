@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { EntidadeAtividade, ModuloSistema, type RegistroAlturaPasto } from '@pecus/shared';
 import { obterArea, atualizarArea, type AreaDetalhada } from '@/lib/areas';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 import {
   listarPiquetes,
   criarPiquete,
@@ -192,7 +192,6 @@ export default function DetalheAreaPage() {
     }
   }
 
-  const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
   if (erro && !area) {
     return (

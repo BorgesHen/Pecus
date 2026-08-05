@@ -21,6 +21,8 @@ export interface MovimentoInsumo {
    * médio); na saída, o custo do que saiu. Nulo = entrada sem valor informado.
    */
   valorTotal?: number | null;
+  /** Só em SAÍDA: lote que consumiu — é o que leva o valor pro custo do lote. */
+  loteId?: string | null;
   data: string;
   gastoId?: string | null;
   observacao?: string | null;

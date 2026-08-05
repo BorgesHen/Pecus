@@ -27,7 +27,7 @@ import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 
 const CRIA_VAZIA: NovaCria = { identificador: '', sexo: SexoAnimal.FEMEA };
 
@@ -135,7 +135,6 @@ export default function ReproducaoPage() {
     }
   }
 
-  const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 
   return (
     <div className="container">

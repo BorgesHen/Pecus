@@ -289,6 +289,13 @@ export function NavShell({
               disabled={trocando}
               onChange={(e) => selecionarEmpresa(e.target.value)}
             >
+              {/* Opção vazia explícita quando não há fazenda ativa — o caso do
+                  ADMIN, que não tem vínculo com nenhuma e entra sem uma
+                  selecionada. Sem esta opção o `value=""` não casava com nenhum
+                  item e o navegador exibia a primeira fazenda da lista como se
+                  estivesse escolhida, enquanto o sistema não tinha nenhuma: a
+                  pessoa via um nome e as telas respondiam "sem fazenda". */}
+              {!usuario.empresaAtivaId && <option value="">Selecione a fazenda…</option>}
               {empresas.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.nome}

@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import {
+  TipoMovimentoInsumo,
   calcularCompraLote,
   montarCustoAnimal,
   quantidadeLegivel,
@@ -37,7 +38,7 @@ export async function custoDeAnimais(
   // Três consultas pro conjunto inteiro, independente de quantos animais. Fazer
   // por animal seria um N+1 numa tela que lista o lote todo — foi o que derrubou
   // reprodução e estoque antes, porque cada consulta ocupa uma conexão do pool.
-  const [lotes, gastos, animaisPorLote, eventos] = await Promise.all([
+  const [lotes, gastos, animaisPorLote, eventos, consumos] = await Promise.all([
     loteIds.length
       ? prisma.lote.findMany({
           where: { id: { in: loteIds }, empresaId },
@@ -72,6 +73,15 @@ export async function custoDeAnimais(
       },
       orderBy: { data: 'desc' },
     }),
+    // Consumo de estoque atribuído ao lote (ração, sal). É o que faz esse
+    // dinheiro existir: a compra do insumo fica fora do rateio de propósito, e
+    // sem o consumo aqui o valor desaparecia entre comprar e usar.
+    loteIds.length
+      ? prisma.movimentoInsumo.findMany({
+          where: { empresaId, loteId: { in: loteIds }, tipo: TipoMovimentoInsumo.SAIDA },
+          select: { loteId: true, valorTotal: true },
+        })
+      : [],
   ]);
 
   const cadastradosPorLote = new Map(animaisPorLote.map((g) => [g.loteId ?? '', g._count._all]));
@@ -83,9 +93,18 @@ export async function custoDeAnimais(
       .filter((g) => g.loteId === lote.id)
       .map((g) => ({ valor: Number(g.valor), insumoId: g.insumoId, categoria: g.categoria }));
 
+    const consumosDoLote = consumos
+      .filter((c) => c.loteId === lote.id)
+      .map((c) => ({ valorTotal: c.valorTotal == null ? null : Number(c.valorTotal) }));
+
     rateioPorLote.set(
       lote.id,
-      ratearGastosDoLote(gastosDoLote, lote.quantidadeAnimais, cadastradosPorLote.get(lote.id) ?? 0),
+      ratearGastosDoLote(
+        gastosDoLote,
+        lote.quantidadeAnimais,
+        cadastradosPorLote.get(lote.id) ?? 0,
+        consumosDoLote,
+      ),
     );
 
     compraPorLote.set(

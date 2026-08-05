@@ -35,6 +35,15 @@ export interface CustoUnitarioInsumo {
 const SEM_CUSTO: CustoUnitarioInsumo = { custoUnitario: null, quantidadeValorada: 0, valorTotal: 0 };
 
 /**
+ * Arredonda em quatro casas — a precisão de custo unitário.
+ *
+ * Duas casas (centavos) é o certo pra um total, e o errado pra a parcela de um
+ * animal: uma dose pequena de insumo barato vale menos de um centavo, e em
+ * centavos ela vira zero.
+ */
+const arredondar4 = (valor: number) => Math.round(valor * 10_000) / 10_000;
+
+/**
  * Custo médio de vários insumos de uma vez.
  *
  * Uma consulta só pra todas as entradas, agrupada em memória — calcular insumo
@@ -153,6 +162,8 @@ export async function baixarEstoque(
     nomeDoInsumo: string;
     quantidade: number;
     unidadeInformada?: string | null;
+    /** Lote que consumiu — é o que faz a baixa virar custo daquele lote. */
+    loteId?: string | null;
     data: Date;
     observacao?: string;
   },
@@ -169,9 +180,11 @@ export async function baixarEstoque(
   const saldoAntes = saldos.get(dados.insumoId) ?? 0;
   const saldoDepois = saldoAntes - quantidade;
 
-  // Centavos: o custo do que saiu é dinheiro, e Decimal(12,2) no banco truncaria
-  // de qualquer jeito — melhor arredondar aqui, onde dá pra explicar.
-  const valorTotal = custoUnitario == null ? null : Math.round(custoUnitario * quantidade * 100) / 100;
+  // Quatro casas, não centavos. A dose de um animal pode valer frações de
+  // centavo (0,2 ml de um produto de R$ 12,00/L custa R$ 0,0024) e arredondar em
+  // centavos aqui não deixava o valor "arredondado": zerava ele. A exibição
+  // continua em centavos — ver `brlValor` no frontend.
+  const valorTotal = custoUnitario == null ? null : arredondar4(custoUnitario * quantidade);
 
   const movimento = await tx.movimentoInsumo.create({
     data: {
@@ -180,6 +193,7 @@ export async function baixarEstoque(
       tipo: TipoMovimentoInsumo.SAIDA,
       quantidade,
       valorTotal,
+      loteId: dados.loteId ?? null,
       data: dados.data,
       observacao: dados.observacao,
     },

@@ -47,6 +47,15 @@ export class RegistrarConsumoDto {
   @IsString()
   unidade?: string;
 
+  /**
+   * Lote que consumiu. É o que faz a ração comprada pelo estoque virar custo:
+   * sem lote, a baixa acontece mas não entra em custo de lote nenhum (é consumo
+   * geral da fazenda).
+   */
+  @IsOptional()
+  @IsString()
+  loteId?: string;
+
   @IsDateString()
   data: string;
 

@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { NaturezaFinanceira, StatusLancamento } from '@pecus/shared';
+import { NaturezaFinanceira, StatusLancamento, diaJaPassou } from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
@@ -28,9 +28,21 @@ function calcularValoresParcelas(valorTotal: number, totalParcelas: number): num
   return Array.from({ length: totalParcelas }, (_, i) => (i === totalParcelas - 1 ? base + resto : base) / 100);
 }
 
+/**
+ * Atrasado é quem venceu **antes de hoje** — comparação de dia, não de instante.
+ *
+ * Antes era `dataVencimento < new Date()`. O vencimento é gravado como meia-noite
+ * UTC (`2026-08-05T00:00:00Z`), então às 21h de Brasília do dia 4 aquele instante
+ * já passou e a parcela do dia 5 aparecia "Atrasado" — mais de um dia antes de
+ * realmente atrasar.
+ *
+ * `diaJaPassou` compara dia com dia, usando **hoje no fuso da fazenda** (ver
+ * datas.ts). Comparar com o dia em UTC deixaria uma janela de três horas por
+ * noite em que a parcela de hoje já apareceria atrasada — o mesmo erro, menor.
+ */
 function calcularStatus(dataVencimento: Date, dataLiquidacao: Date | null): StatusLancamento {
   if (dataLiquidacao) return StatusLancamento.LIQUIDADO;
-  return dataVencimento < new Date() ? StatusLancamento.ATRASADO : StatusLancamento.EM_ABERTO;
+  return diaJaPassou(dataVencimento) ? StatusLancamento.ATRASADO : StatusLancamento.EM_ABERTO;
 }
 
 async function garantirContaDaEmpresa(empresaId: string, contaId: string) {

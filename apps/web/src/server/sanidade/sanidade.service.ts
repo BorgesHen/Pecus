@@ -74,9 +74,13 @@ async function consumirInsumo(
     unidadeDoInsumo: insumo.unidade,
     /** Dose de um animal, na unidade de cadastro do insumo. */
     dosePorAnimal,
-    /** Custo de um animal — o total da baixa dividido pelas cabeças, sem re-arredondar a média. */
+    /**
+     * Custo de um animal. Quatro casas: a dose de uma cabeça pode custar menos
+     * de um centavo, e arredondar em centavos aqui zerava o valor em vez de
+     * arredondá-lo.
+     */
     custoPorAnimal:
-      baixa.custoUnitario == null ? null : Math.round(baixa.custoUnitario * dosePorAnimal * 100) / 100,
+      baixa.custoUnitario == null ? null : Math.round(baixa.custoUnitario * dosePorAnimal * 10_000) / 10_000,
   };
 }
 

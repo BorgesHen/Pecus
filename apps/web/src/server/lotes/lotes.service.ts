@@ -46,7 +46,9 @@ function garantirCompraCoerente(dto: { pesoMedioCompra?: number; valorKgCompra?:
 export function listar(empresaId: string) {
   return prisma.lote.findMany({
     where: { empresaId },
-    include: { metodoManejo: true, _count: { select: { pesagens: true, gastos: true } } },
+    // `animais` na contagem porque o aviso de exclusão precisa dizer quantos
+    // animais ficariam sem lote — antes ele nem mencionava que isso acontece.
+    include: { metodoManejo: true, _count: { select: { pesagens: true, gastos: true, animais: true } } },
     orderBy: { dataAquisicao: 'desc' },
   });
 }

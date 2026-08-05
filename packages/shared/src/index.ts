@@ -24,6 +24,8 @@ export * from './config/recursos-personalizados';
 export * from './config/compra-lote';
 export * from './config/idade-animal';
 export * from './config/gmd-animal';
+export * from './config/datas';
+export * from './config/validacao';
 export * from './config/unidades';
 export * from './config/custo-animal';
 export * from './config/senha';

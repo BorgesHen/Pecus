@@ -298,6 +298,7 @@ model Lote {
   metodoHistorico LoteMetodoHistorico[]
   animais         Animal[]
   lancamentos     Lancamento[]
+  consumosInsumo  MovimentoInsumo[]
 }
 
 /// Área de pasto — separada do Lote (que é só organização de animais). Se
@@ -408,7 +409,12 @@ model EventoSanitario {
   /// propósito: o custo médio do estoque muda a cada compra nova, e o que este
   /// animal custou não pode mudar retroativamente. Nulo = insumo sem valor de
   /// compra conhecido.
-  custo             Decimal?            @db.Decimal(12, 2)
+  ///
+  /// Quatro casas, não duas: a dose de um animal pode custar menos de um
+  /// centavo (0,2 ml de um produto de R$ 12/L custa R$ 0,0024) e em centavos
+  /// isso virava R$ 0,00 — o custo desaparecia do animal em vez de só aparecer
+  /// arredondado. Cinquenta doses dessas somam R$ 0,12, que também sumia.
+  custo             Decimal?            @db.Decimal(14, 4)
   /// A saída de estoque que esta aplicação gerou. Numa aplicação em massa, os
   /// eventos de todos os animais apontam pro mesmo movimento (uma baixa só, com
   /// o total consumido — 50 linhas no extrato do estoque por uma vacinação
@@ -556,7 +562,14 @@ model MovimentoInsumo {
   ///
   /// Na SAÍDA é o custo do que saiu, ao custo médio do dia — é o que permite
   /// dizer quanto os 5 ml aplicados naquele animal custaram.
-  valorTotal Decimal?            @db.Decimal(12, 2)
+  ///
+  /// Quatro casas pelo mesmo motivo do custo do evento sanitário: uma baixa
+  /// pequena de insumo barato vale frações de centavo.
+  valorTotal Decimal?            @db.Decimal(14, 4)
+  /// Lote que consumiu (só em SAÍDA). É o que faz a ração comprada pelo estoque
+  /// virar custo do lote: a compra em si não é custo (é estoque), o consumo é.
+  /// Nulo = consumo geral da fazenda, que não entra em custo de lote nenhum.
+  loteId     String?
   gastoId    String?
   observacao String?
   createdAt  DateTime            @default(now())
@@ -564,10 +577,12 @@ model MovimentoInsumo {
   empresa           Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   insumo            Insumo            @relation(fields: [insumoId], references: [id], onDelete: Cascade)
   gasto             Gasto?            @relation(fields: [gastoId], references: [id])
+  lote              Lote?             @relation(fields: [loteId], references: [id])
   eventosSanitarios EventoSanitario[]
 
   @@index([empresaId, insumoId, tipo])
   @@index([insumoId, data])
+  @@index([empresaId, loteId])
 }
 
 /// Grupo de nível 1 do plano de contas financeiro (ex: "Custos Variáveis").

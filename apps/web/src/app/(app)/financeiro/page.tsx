@@ -24,7 +24,7 @@ import {
   type LancamentoDetalhado,
   type NovoLancamento,
 } from '@/lib/financeiro';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import type { ContaBancaria, Contato } from '@pecus/shared';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
@@ -162,7 +162,6 @@ export default function FinanceiroPage() {
   }
 
   const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
   const contasDaNatureza = grupos
     .filter((g) => g.natureza === natureza)

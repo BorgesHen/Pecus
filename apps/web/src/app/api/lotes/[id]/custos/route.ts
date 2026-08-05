@@ -59,11 +59,15 @@ export const GET = rota(async (req, { params }) => {
       compraPorCabeca: primeiro?.compra ?? null,
       rateioPorCabeca: primeiro?.rateio?.porCabeca ?? null,
       totalRateavel: primeiro?.rateio?.totalRateavel ?? null,
+      totalGastos: primeiro?.rateio?.totalGastos ?? null,
+      totalConsumoDeInsumo: primeiro?.rateio?.totalConsumoDeInsumo ?? null,
       comprasDeInsumo: primeiro?.rateio?.totalComprasDeInsumo ?? null,
       cabecas: primeiro?.rateio?.cabecas ?? null,
     },
     ressalvas: primeiro?.ressalvas ?? [],
-    totalDiretoDoLote: Math.round(linhas.reduce((soma, l) => soma + l.direto, 0) * 100) / 100,
+    // Quatro casas pelo mesmo motivo de custo-animal.ts: somar doses baratas em
+    // centavos zera o total.
+    totalDiretoDoLote: Math.round(linhas.reduce((soma, l) => soma + l.direto, 0) * 10_000) / 10_000,
     animais: linhas,
   };
 });

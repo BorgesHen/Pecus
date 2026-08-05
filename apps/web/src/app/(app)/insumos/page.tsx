@@ -7,15 +7,21 @@ import {
   UNIDADES_SUGERIDAS,
   converterUnidade,
   formatarQuantidade,
+  quantidadeLegivel,
 } from '@pecus/shared';
 import {
   listarInsumos,
   criarInsumo,
   registrarConsumo,
   registrarEntrada,
+  listarMovimentosInsumo,
+  removerMovimentoInsumo,
   type InsumoComSaldo,
   type NovoInsumo,
 } from '@/lib/insumos';
+import { listarLotes, type LoteComContagem } from '@/lib/lotes';
+import type { MovimentoInsumo } from '@pecus/shared';
+import { brData } from '@/lib/data';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -56,7 +62,10 @@ export default function InsumosPage() {
   const [movimento, setMovimento] = useState<{ insumo: InsumoComSaldo; tipo: TipoMovimento } | null>(
     null,
   );
+  const [lotes, setLotes] = useState<LoteComContagem[]>([]);
+  const [extrato, setExtrato] = useState<{ insumo: InsumoComSaldo; movimentos: MovimentoInsumo[] } | null>(null);
   const [quantidade, setQuantidade] = useState<number | ''>('');
+  const [loteConsumo, setLoteConsumo] = useState('');
   const [unidadeLancada, setUnidadeLancada] = useState('');
   const [valorPago, setValorPago] = useState<number | ''>('');
   const [dataMovimento, setDataMovimento] = useState(hojeISO());
@@ -70,6 +79,9 @@ export default function InsumosPage() {
 
   useEffect(() => {
     carregar();
+    // Falha em silêncio: sem o módulo Lotes o seletor de lote não aparece e o
+    // consumo continua podendo ser lançado como geral da fazenda.
+    listarLotes().then(setLotes).catch(() => setLotes([]));
   }, []);
 
   function abrirModalNovo() {
@@ -91,12 +103,39 @@ export default function InsumosPage() {
     }
   }
 
+  async function abrirExtrato(insumo: InsumoComSaldo) {
+    try {
+      setExtrato({ insumo, movimentos: await listarMovimentosInsumo(insumo.id) });
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao carregar o extrato do insumo');
+    }
+  }
+
+  async function excluirMovimento(movimentoId: string) {
+    if (!extrato) return;
+    try {
+      await removerMovimentoInsumo(extrato.insumo.id, movimentoId);
+      toast.sucesso('Movimento excluído. Saldo e custo médio recalculados.');
+      // Recarrega os dois: o saldo/custo do insumo mudou, e o extrato também.
+      const [insumos, movimentos] = await Promise.all([
+        listarInsumos(),
+        listarMovimentosInsumo(extrato.insumo.id),
+      ]);
+      setInsumos(insumos);
+      const atualizado = insumos.find((i) => i.id === extrato.insumo.id);
+      setExtrato(atualizado ? { insumo: atualizado, movimentos } : null);
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao excluir o movimento');
+    }
+  }
+
   function abrirMovimento(insumo: InsumoComSaldo, tipo: TipoMovimento) {
     setQuantidade('');
     // Começa na unidade de cadastro: é a que o produtor usa na maioria dos
     // lançamentos. Trocar pra ml só vale a pena quando é dose de remédio.
     setUnidadeLancada(insumo.unidade);
     setValorPago('');
+    setLoteConsumo('');
     setDataMovimento(hojeISO());
     setObservacao('');
     setMovimento({ insumo, tipo });
@@ -111,6 +150,7 @@ export default function InsumosPage() {
         quantidade: Number(quantidade),
         unidade: unidadeLancada || undefined,
         valorTotal: tipo === 'ENTRADA' && valorPago !== '' ? Number(valorPago) : undefined,
+        loteId: tipo === 'SAIDA' && loteConsumo ? loteConsumo : undefined,
         data: dataMovimento,
         observacao: observacao.trim() || undefined,
       });
@@ -248,6 +288,9 @@ export default function InsumosPage() {
                         >
                           Registrar consumo
                         </button>
+                        <button className="btn-secundario" onClick={() => abrirExtrato(i)}>
+                          Extrato
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -306,6 +349,84 @@ export default function InsumosPage() {
               </button>
               <button className="btn" onClick={salvarInsumo} disabled={salvando || !form.nome || !form.unidade}>
                 {salvando ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {extrato && (
+        <div className="modal-overlay" onClick={() => setExtrato(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Extrato — {extrato.insumo.nome}</h3>
+            <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginBottom: 12 }}>
+              Saldo: <strong>{formatarQuantidade(extrato.insumo.saldoAtual, extrato.insumo.unidade)}</strong>
+              {extrato.insumo.custoUnitario != null && (
+                <>
+                  {' · '}Custo médio:{' '}
+                  <strong>{brlUnitario(extrato.insumo.custoUnitario, extrato.insumo.unidade)}</strong>
+                </>
+              )}
+              <br />
+              O custo médio sai das entradas com valor. Um erro de unidade na entrada (1000 lançado em
+              L quando eram ml) distorce o saldo e o custo — apague o movimento e lance de novo.
+            </p>
+
+            {extrato.movimentos.length === 0 ? (
+              <p className="atividade-vazio">Nenhum movimento registrado.</p>
+            ) : (
+              <div className="tabela-wrap">
+                <table className="tabela">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Tipo</th>
+                      <th>Quantidade</th>
+                      <th>Valor</th>
+                      <th>Origem</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extrato.movimentos.map((m) => {
+                      const legivel = quantidadeLegivel(m.quantidade, extrato.insumo.unidade);
+                      // Movimento de compra pertence ao gasto; de aplicação, ao
+                      // evento sanitário. O servidor recusa apagar os dois.
+                      const manual = !m.gastoId && !m.loteId;
+                      return (
+                        <tr key={m.id}>
+                          <td data-label="Data">{brData(m.data)}</td>
+                          <td data-label="Tipo">{m.tipo === 'ENTRADA' ? 'Entrada' : 'Baixa'}</td>
+                          <td data-label="Quantidade">
+                            {formatarQuantidade(legivel.quantidade, legivel.unidade)}
+                          </td>
+                          <td data-label="Valor">{brlOuTraco(m.valorTotal)}</td>
+                          <td data-label="Origem">
+                            {m.gastoId ? 'Compra (gasto)' : m.observacao || 'Lançamento manual'}
+                          </td>
+                          <td data-label="">
+                            {podeEditarEstoque && !m.gastoId && (
+                              <button className="btn-perigo" onClick={() => excluirMovimento(m.id)}>
+                                Excluir
+                              </button>
+                            )}
+                            {m.gastoId && (
+                              <span style={{ color: 'var(--texto-suave)', fontSize: 12 }}>
+                                exclua o gasto
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="modal-acoes">
+              <button className="btn-secundario" onClick={() => setExtrato(null)}>
+                Fechar
               </button>
             </div>
           </div>
@@ -376,6 +497,25 @@ export default function InsumosPage() {
                 />
               </div>
             </div>
+
+            {movimento.tipo === 'SAIDA' && lotes.length > 0 && (
+              <div className="campo">
+                <label>Lote que consumiu (opcional)</label>
+                <select className="input" value={loteConsumo} onChange={(e) => setLoteConsumo(e.target.value)}>
+                  <option value="">Consumo geral da fazenda</option>
+                  {lotes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.identificacao}
+                    </option>
+                  ))}
+                </select>
+                <small style={{ color: 'var(--texto-suave)' }}>
+                  Escolhendo o lote, o valor desta baixa entra no custo dele e é rateado por cabeça —
+                  é assim que a ração comprada pelo estoque vira custo. Sem lote, a baixa acontece mas
+                  não entra em custo de lote nenhum.
+                </small>
+              </div>
+            )}
 
             {movimento.tipo === 'ENTRADA' && (
               <div className="campo">

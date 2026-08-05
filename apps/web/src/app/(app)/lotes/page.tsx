@@ -27,7 +27,7 @@ import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 
 const FORM_VAZIO: NovoLote = {
   identificacao: '',
@@ -40,6 +40,36 @@ const FORM_VAZIO: NovoLote = {
   rendimentoCarcaca: undefined,
   gmdEsperado: undefined,
 };
+
+/**
+ * O que a exclusão de um lote realmente faz.
+ *
+ * O aviso anterior dizia que "pesagens e gastos também serão removidos". Só a
+ * primeira metade era verdade: `Pesagem` e o histórico de método são cascata, mas
+ * gasto, animal, lançamento financeiro e baixa de estoque apenas **perdem o
+ * vínculo** — continuam existindo, sem lote. E os animais nem eram mencionados,
+ * embora sejam o que mais dói perder de vista.
+ *
+ * Um aviso que promete apagar o que não apaga é pior que nenhum aviso: quem
+ * confia nele deixa dado órfão sem saber.
+ */
+function mensagemDeExclusao(lote: LoteComContagem): string {
+  const removidos = lote._count.pesagens > 0 ? `As ${lote._count.pesagens} pesagens do lote serão apagadas.` : '';
+
+  const orfaos = [
+    lote._count.animais > 0 ? `${lote._count.animais} animal(is)` : null,
+    lote._count.gastos > 0 ? `${lote._count.gastos} gasto(s)` : null,
+  ].filter(Boolean);
+
+  const semVinculo = orfaos.length
+    ? ` ${orfaos.join(' e ')} continuam cadastrados, mas ficam sem lote — o custo por cabeça deles deixa de ser calculado.`
+    : '';
+
+  return `"${lote.identificacao}" será excluído. ${removidos}${semVinculo} Esta ação não pode ser desfeita.`.replace(
+    /\s+/g,
+    ' ',
+  );
+}
 
 export default function LotesPage() {
   const router = useRouter();
@@ -145,7 +175,6 @@ export default function LotesPage() {
     }
   }
 
-  const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
   const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   const resumoCompraForm = calcularCompraLote({
@@ -463,7 +492,7 @@ export default function LotesPage() {
       {paraExcluir && (
         <PopupConfirmacao
           titulo="Excluir lote?"
-          mensagem={`Pesagens e gastos vinculados a "${paraExcluir.identificacao}" também serão removidos. Esta ação não pode ser desfeita.`}
+          mensagem={mensagemDeExclusao(paraExcluir)}
           onConfirmar={confirmarExclusao}
           onCancelar={() => setParaExcluir(null)}
         />

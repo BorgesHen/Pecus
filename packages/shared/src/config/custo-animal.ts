@@ -21,12 +21,34 @@
  * pontas, os R$ 1.000 do frasco apareceriam rateados entre todas as cabeças E
  * de novo na cabeça que tomou a dose.
  *
+ * O outro lado dessa decisão: se a compra sai do rateio, o **consumo** tem que
+ * entrar em algum lugar, senão o dinheiro desaparece entre comprar e usar. Foi
+ * exatamente o que aconteceu com a ração comprada pelo estoque: a compra saía do
+ * rateio e o consumo não era atribuído a lote nenhum, então não virava custo de
+ * ninguém. Por isso o rateio soma, junto com os gastos comuns, o **consumo de
+ * insumo atribuído ao lote** (`MovimentoInsumo` de SAÍDA com `loteId`), avaliado
+ * ao custo médio do estoque no dia.
+ *
+ * Resumindo os três caminhos do dinheiro de insumo:
+ *
+ *   compra (Gasto com insumo)  → estoque, não é custo ainda
+ *   consumo atribuído ao lote  → rateio, dividido por cabeça (ração, sal)
+ *   aplicado num animal        → custo direto daquele animal (remédio, vacina)
+ *
  * Função pura, sem Prisma: quem monta as entradas é o service.
  */
 
-/** Arredonda pra centavos, evitando o arrastar de casas do ponto flutuante. */
-function centavos(valor: number): number {
-  return Math.round(valor * 100) / 100;
+/**
+ * Arredonda em quatro casas, evitando o arrastar de casas do ponto flutuante.
+ *
+ * Quatro e não duas: a parcela de um animal pode valer frações de centavo (a dose
+ * de 0,2 ml de um produto de R$ 12,00/L custa R$ 0,0024). Arredondar a SOMA em
+ * centavos aqui zerava exatamente o valor que a gravação já tinha preservado — o
+ * custo aparecia no evento e desaparecia no total. Quem decide quantas casas
+ * mostrar é a exibição (`brlValor`), não a conta.
+ */
+function arredondar(valor: number): number {
+  return Math.round(valor * 10_000) / 10_000;
 }
 
 export interface GastoParaCusto {
@@ -36,10 +58,19 @@ export interface GastoParaCusto {
   categoria?: string | null;
 }
 
+export interface ConsumoParaCusto {
+  /** Custo do que saiu do estoque, ao custo médio do dia. Nulo = insumo sem valor. */
+  valorTotal: number | null;
+}
+
 export interface RateioDoLote {
-  /** Gastos que entram no rateio (soma). */
+  /** Total que entra no rateio: gastos comuns + consumo de insumo do lote. */
   totalRateavel: number;
-  /** Gastos de compra de insumo do lote — informativo, não rateado. */
+  /** Só os gastos comuns (ração lançada direto, frete, diária). */
+  totalGastos: number;
+  /** Só o consumo de estoque atribuído a este lote. */
+  totalConsumoDeInsumo: number;
+  /** Gastos de compra de insumo do lote — informativo, não rateado (é estoque). */
   totalComprasDeInsumo: number;
   /** Cabeças usadas como divisor. */
   cabecas: number;
@@ -59,21 +90,30 @@ export function ratearGastosDoLote(
   gastos: GastoParaCusto[],
   quantidadeDeclarada: number,
   animaisCadastrados = 0,
+  /** Saídas de estoque atribuídas a este lote — ração, sal, o que se gastou no trato. */
+  consumos: ConsumoParaCusto[] = [],
 ): RateioDoLote {
-  let totalRateavel = 0;
+  let totalGastos = 0;
   let totalComprasDeInsumo = 0;
   for (const gasto of gastos) {
     if (gasto.insumoId) totalComprasDeInsumo += gasto.valor;
-    else totalRateavel += gasto.valor;
+    else totalGastos += gasto.valor;
   }
+
+  // Consumo sem valor (insumo sem custo de compra conhecido) não entra como
+  // zero: não se sabe quanto custou, e somar zero afirmaria que não custou nada.
+  const totalConsumoDeInsumo = consumos.reduce((soma, c) => soma + (c.valorTotal ?? 0), 0);
+  const totalRateavel = totalGastos + totalConsumoDeInsumo;
 
   const cabecas = Math.max(0, Math.trunc(quantidadeDeclarada || 0)) || Math.max(0, animaisCadastrados);
 
   return {
-    totalRateavel: centavos(totalRateavel),
-    totalComprasDeInsumo: centavos(totalComprasDeInsumo),
+    totalRateavel: arredondar(totalRateavel),
+    totalGastos: arredondar(totalGastos),
+    totalConsumoDeInsumo: arredondar(totalConsumoDeInsumo),
+    totalComprasDeInsumo: arredondar(totalComprasDeInsumo),
     cabecas,
-    porCabeca: cabecas > 0 ? centavos(totalRateavel / cabecas) : 0,
+    porCabeca: cabecas > 0 ? arredondar(totalRateavel / cabecas) : 0,
   };
 }
 
@@ -117,7 +157,7 @@ export function montarCustoAnimal(entrada: {
 }): CustoAnimal {
   const diretos = entrada.diretos ?? [];
   const comValor = diretos.filter((d) => d.valor != null);
-  const totalDireto = centavos(comValor.reduce((soma, d) => soma + (d.valor ?? 0), 0));
+  const totalDireto = arredondar(comValor.reduce((soma, d) => soma + (d.valor ?? 0), 0));
   const compra = entrada.compraPorCabeca ?? null;
   const rateio = entrada.rateio ?? null;
 
@@ -133,7 +173,14 @@ export function montarCustoAnimal(entrada: {
     }
     if (rateio && rateio.totalComprasDeInsumo > 0) {
       ressalvas.push(
-        'As compras de insumo do lote não são rateadas: elas viram custo quando o insumo é aplicado num animal.',
+        'As compras de insumo lançadas neste lote não são rateadas: elas entram no custo quando o insumo é consumido — como consumo do lote (ração, sal) ou aplicado num animal (remédio).',
+      );
+    }
+    // Compra de insumo no lote sem nenhum consumo atribuído a ele é o sintoma
+    // de dinheiro parado no meio do caminho: comprou e nunca deu baixa pro lote.
+    if (rateio && rateio.totalComprasDeInsumo > 0 && rateio.totalConsumoDeInsumo === 0) {
+      ressalvas.push(
+        'Há compra de insumo neste lote sem nenhum consumo lançado para ele. Registre o consumo no Estoque escolhendo este lote para que a ração entre no custo.',
       );
     }
   }
@@ -152,7 +199,7 @@ export function montarCustoAnimal(entrada: {
     totalDireto,
     diretos,
     diretosSemValor: semValor,
-    total: centavos((compra ?? 0) + (rateio?.porCabeca ?? 0) + totalDireto),
+    total: arredondar((compra ?? 0) + (rateio?.porCabeca ?? 0) + totalDireto),
     ressalvas,
   };
 }
@@ -179,6 +226,6 @@ export function custoMedioInsumo(
   return {
     custoUnitario: quantidade > 0 ? valor / quantidade : null,
     quantidadeValorada: quantidade,
-    valorTotal: centavos(valor),
+    valorTotal: arredondar(valor),
   };
 }

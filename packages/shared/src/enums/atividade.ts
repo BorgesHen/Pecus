@@ -99,6 +99,12 @@ export const MODULO_DA_ENTIDADE: Record<EntidadeAtividade, ModuloSistema | null>
  * quem cuida do gado — o que responde "o que mudou?" é "Tamanho (ha)".
  */
 export const LABEL_CAMPO_ATIVIDADE: Record<string, string> = {
+  // Rótulos que o fallback automático deixava feio ("Escore famacha", "Peso medio").
+  escoreFamacha: 'Escore FAMACHA',
+  escoreCorporal: 'Escore de condição corporal',
+  pesoMedio: 'Peso médio',
+  quantidadeInsumo: 'Quantidade do insumo',
+  unidadeInsumo: 'Unidade do insumo',
   // Comuns a várias telas
   nome: 'Nome',
   identificacao: 'Identificação',

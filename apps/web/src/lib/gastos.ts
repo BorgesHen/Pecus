@@ -26,8 +26,23 @@ export function criarGasto(dados: NovoGasto) {
   return api<Gasto>('/gastos', { method: 'POST', body: dados });
 }
 
+/**
+ * Exclui o gasto — e desfaz a entrada de estoque que ele tinha gerado.
+ *
+ * `estoque` vem preenchido só quando havia entrada a desfazer, com o saldo
+ * resultante e um aviso quando ele fica negativo (parte da compra já consumida).
+ */
 export function removerGasto(id: string) {
-  return api<{ ok: true }>(`/gastos/${id}`, { method: 'DELETE' });
+  return api<{
+    ok: true;
+    estoque: {
+      insumo: string;
+      unidade: string;
+      quantidadeDesfeita: number;
+      saldoDepois: number;
+      aviso: string | null;
+    } | null;
+  }>(`/gastos/${id}`, { method: 'DELETE' });
 }
 
 export function gastosPorCategoria(loteId?: string) {

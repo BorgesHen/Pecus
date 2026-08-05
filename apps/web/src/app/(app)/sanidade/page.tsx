@@ -29,7 +29,7 @@ import { brlOuTraco } from '@/lib/formato';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 
 type Alvo = 'animal' | 'lote';
 
@@ -189,7 +189,6 @@ export default function SanidadePage() {
     }
   }
 
-  const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 
   /** Cabeças que a aplicação em massa vai atingir — o estoque baixa dose × cabeças. */
   const cabecasAlvo =

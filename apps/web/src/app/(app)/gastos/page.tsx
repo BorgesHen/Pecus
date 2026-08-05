@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { EntidadeAtividade, CategoriaGasto, ModuloSistema } from '@pecus/shared';
+import { EntidadeAtividade, CategoriaGasto, ModuloSistema, formatarQuantidade } from '@pecus/shared';
 import {
   listarGastos,
   criarGasto,
@@ -15,7 +15,7 @@ import type { Gasto } from '@pecus/shared';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 
 const FORM_VAZIO: NovoGasto = {
@@ -105,8 +105,14 @@ export default function GastosPage() {
     if (!paraExcluir) return;
     const excluido = paraExcluir;
     try {
-      await removerGasto(excluido.id);
-      toast.sucesso(`Gasto de ${brl(excluido.valor)} excluído.`);
+      const resultado = await removerGasto(excluido.id);
+      // A baixa no estoque entra na mensagem: o saldo do insumo muda junto, e
+      // sem dizer isso a queda pareceria vir do nada.
+      const estoque = resultado.estoque
+        ? ` Entrada de ${formatarQuantidade(resultado.estoque.quantidadeDesfeita, resultado.estoque.unidade)} de "${resultado.estoque.insumo}" desfeita no estoque.`
+        : '';
+      toast.sucesso(`Gasto de ${brl(excluido.valor)} excluído.${estoque}`);
+      if (resultado.estoque?.aviso) toast.erro(resultado.estoque.aviso);
       carregar(filtroLoteId);
     } catch (e) {
       toast.erroDe(e, 'Erro ao excluir gasto');
@@ -116,7 +122,6 @@ export default function GastosPage() {
   }
 
   const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
   const nomeLote = (id?: string | null) => lotes.find((l) => l.id === id)?.identificacao ?? 'Geral';
 
   const total = gastos?.reduce((acc, g) => acc + Number(g.valor), 0) ?? 0;

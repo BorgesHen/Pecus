@@ -1,7 +1,7 @@
 'use client';
 
 import { formatarQuantidade, type CustoAnimal } from '@pecus/shared';
-import { brl, brlOuTraco } from '@/lib/formato';
+import { brl, brlOuTraco, brlValor } from '@/lib/formato';
 import { brData } from '@/lib/data';
 
 /**
@@ -25,8 +25,19 @@ export function CustoDoAnimal({ custo }: { custo: CustoAnimal }) {
     {
       rotulo: 'Rateio dos gastos do lote',
       valor: custo.rateio?.porCabeca ?? null,
+      // Abre as duas fontes do rateio: gasto lançado direto no lote e consumo de
+      // estoque atribuído a ele. Sem separar, "R$ 0,00 de rateio" não diz se
+      // falta lançar gasto ou se falta dar baixa da ração no lote.
       ajuda: custo.rateio
-        ? `${brl(custo.rateio.totalRateavel)} ÷ ${custo.rateio.cabecas} cabeça(s). Compras de insumo ficam fora: viram custo quando aplicadas.`
+        ? [
+            `${brl(custo.rateio.totalRateavel)} ÷ ${custo.rateio.cabecas} cabeça(s).`,
+            custo.rateio.totalGastos > 0 ? `Gastos do lote: ${brl(custo.rateio.totalGastos)}.` : null,
+            custo.rateio.totalConsumoDeInsumo > 0
+              ? `Consumo de estoque no lote: ${brl(custo.rateio.totalConsumoDeInsumo)}.`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' ')
         : undefined,
     },
     {
@@ -40,7 +51,7 @@ export function CustoDoAnimal({ custo }: { custo: CustoAnimal }) {
     <div className="card" style={{ marginBottom: 24 }}>
       <div className="topo-tela" style={{ marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>Custo de produção</h3>
-        <strong style={{ fontSize: 20 }}>{brl(custo.total)}</strong>
+        <strong style={{ fontSize: 20 }}>{brlValor(custo.total)}</strong>
       </div>
 
       <div className="tabela-wrap">

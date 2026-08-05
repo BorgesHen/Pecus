@@ -200,7 +200,9 @@ export async function cobertura(empresaId: string, loteId: string) {
       semRegistro: recortar(semRegistroSanitario),
       reaplicacoesVencidas: recortar(reaplicacoesVencidas),
       /** Soma dos custos de insumo lançados nos animais ativos deste lote. */
-      custoInsumosAplicados: Math.round(custoSanitarioDoLote * 100) / 100,
+      // Quatro casas: a soma de doses baratas pode ficar abaixo de um centavo, e
+    // em centavos ela viraria zero (ver custo-animal.ts).
+    custoInsumosAplicados: Math.round(custoSanitarioDoLote * 10_000) / 10_000,
     },
   };
 }

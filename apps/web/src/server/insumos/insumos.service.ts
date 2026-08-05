@@ -91,6 +91,14 @@ export async function listarMovimentos(empresaId: string, insumoId: string) {
  */
 export async function registrarConsumo(empresaId: string, insumoId: string, dto: RegistrarConsumoDto) {
   const insumo = await detalhar(empresaId, insumoId);
+
+  // Lote de outra fazenda não pode receber o custo: sem esta checagem, um id
+  // qualquer no corpo da requisição jogaria a baixa no lote de outra empresa.
+  if (dto.loteId) {
+    const lote = await prisma.lote.findFirst({ where: { id: dto.loteId, empresaId }, select: { id: true } });
+    if (!lote) throw new NotFoundException('Lote não encontrado nesta fazenda.');
+  }
+
   const baixa = await prisma.$transaction((tx) =>
     baixarEstoque(tx, {
       empresaId,
@@ -99,6 +107,7 @@ export async function registrarConsumo(empresaId: string, insumoId: string, dto:
       unidadeDoInsumo: insumo.unidade,
       quantidade: dto.quantidade,
       unidadeInformada: dto.unidade,
+      loteId: dto.loteId,
       data: new Date(dto.data),
       observacao: dto.observacao,
     }),
@@ -113,7 +122,48 @@ export async function registrarConsumo(empresaId: string, insumoId: string, dto:
     custoUnitario: baixa.custoUnitario,
     saldoDepois: baixa.saldoDepois,
     aviso: baixa.aviso ?? null,
+    loteId: dto.loteId ?? null,
     insumo: { nome: insumo.nome, unidade: insumo.unidade },
+  };
+}
+
+/**
+ * Apaga um movimento de estoque lançado à mão.
+ *
+ * Existe porque quantidade e unidade são digitadas: quem lança 1000 achando que
+ * são mililitros de um insumo cadastrado em litro coloca mil litros no estoque, e
+ * o custo médio fica mil vezes menor. Sem uma forma de apagar, o único conserto
+ * era mexer no banco.
+ *
+ * Só movimento **manual**: o que veio de uma compra tem `gastoId` e some junto
+ * com o gasto — apagar só o movimento deixaria o gasto apontando pro nada. E o
+ * que veio de uma aplicação sanitária pertence ao evento: apagar aqui deixaria o
+ * evento dizendo que consumiu algo que não saiu do estoque.
+ */
+export async function removerMovimento(empresaId: string, insumoId: string, movimentoId: string) {
+  const movimento = await prisma.movimentoInsumo.findFirst({
+    where: { id: movimentoId, insumoId, empresaId },
+    include: { _count: { select: { eventosSanitarios: true } } },
+  });
+  if (!movimento) throw new NotFoundException('Movimento não encontrado neste insumo.');
+
+  if (movimento.gastoId) {
+    throw new ConflictException([
+      'Este movimento veio de uma compra registrada como gasto. Exclua o gasto para desfazer a entrada.',
+    ]);
+  }
+  if (movimento._count.eventosSanitarios > 0) {
+    throw new ConflictException([
+      'Esta baixa foi gerada por uma aplicação sanitária e pertence ao evento — não pode ser apagada isoladamente.',
+    ]);
+  }
+
+  await prisma.movimentoInsumo.delete({ where: { id: movimentoId } });
+  return {
+    ok: true,
+    tipo: movimento.tipo,
+    quantidade: movimento.quantidade,
+    valorTotal: movimento.valorTotal == null ? null : Number(movimento.valorTotal),
   };
 }
 

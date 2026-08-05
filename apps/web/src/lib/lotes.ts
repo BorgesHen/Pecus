@@ -13,7 +13,7 @@ import type {
 
 export interface LoteComContagem extends Lote {
   metodoManejo?: MetodoManejo | null;
-  _count: { pesagens: number; gastos: number };
+  _count: { pesagens: number; gastos: number; animais: number };
 }
 
 export interface LoteDetalhado extends Lote {
@@ -179,6 +179,10 @@ export interface CustosDoLote {
     compraPorCabeca: number | null;
     rateioPorCabeca: number | null;
     totalRateavel: number | null;
+    /** Só os gastos lançados direto no lote. */
+    totalGastos: number | null;
+    /** Só o consumo de estoque atribuído ao lote (ração, sal). */
+    totalConsumoDeInsumo: number | null;
     comprasDeInsumo: number | null;
     cabecas: number | null;
   };

@@ -28,11 +28,12 @@ import {
 } from '@/lib/lotes';
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
 import { criarPesagem, obterGmd, type Gmd } from '@/lib/pesagens';
-import { hojeISO } from '@/lib/data';
+import { brData, hojeISO } from '@/lib/data';
 import { indicadoresMetodo, type IndicadoresMetodo } from '@/lib/relatorios';
 import { listarAnimais } from '@/lib/animais';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { AcompanhamentoLote } from '@/components/AcompanhamentoLote';
+import { brl, brlValor } from '@/lib/formato';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
@@ -169,8 +170,8 @@ export default function DetalheLotePage() {
     }
   }
 
-  const brData = (d: string) => new Date(d).toLocaleDateString('pt-BR');
-  const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  // `brl` local trocado pelo do lib: o de lá tem `brlValor`, que mostra frações
+  // de centavo em vez de exibir R$ 0,00 pra uma dose barata.
 
   /** Corrigir a compra depois usa o mesmo simulador do cadastro, via PATCH. */
   async function salvarCompra(dados: DadosCompraSimulada) {
@@ -435,7 +436,9 @@ export default function DetalheLotePage() {
                     <td data-label="Compra">{linha.compra != null ? brl(linha.compra) : '—'}</td>
                     <td data-label="Rateio">{brl(linha.rateio)}</td>
                     <td data-label="Direto no animal">
-                      {linha.direto > 0 ? <strong>{brl(linha.direto)}</strong> : '—'}
+                      {/* brlValor: a soma das doses de um animal pode ficar abaixo
+                          de um centavo, e "R$ 0,00" se lê como "não custou nada". */}
+                      {linha.direto > 0 ? <strong>{brlValor(linha.direto)}</strong> : '—'}
                       {linha.lancamentosSemValor > 0 && (
                         <span
                           style={{ color: 'var(--texto-suave)' }}
@@ -446,7 +449,7 @@ export default function DetalheLotePage() {
                         </span>
                       )}
                     </td>
-                    <td data-label="Total">{brl(linha.total)}</td>
+                    <td data-label="Total">{brlValor(linha.total)}</td>
                   </tr>
                 ))}
               </tbody>

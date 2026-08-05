@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { listarConvites, criarConvite, removerConvite, type Convite } from '@/lib/convites';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 import { useToast } from '@/contexts/ToastContext';
+import { brData } from '@/lib/data';
 
 export default function ConvitesPage() {
   const toast = useToast();
@@ -25,7 +26,6 @@ export default function ConvitesPage() {
     carregar();
   }, []);
 
-  const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
 
   function linkCadastro(codigo: string) {
     return `${window.location.origin}/cadastro?convite=${codigo}`;

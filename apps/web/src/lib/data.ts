@@ -1,6 +1,15 @@
-/** Data de hoje no formato "AAAA-MM-DD", pro atributo `max` de `<input type="date">`. */
+import { hojeNaFazenda } from '@pecus/shared';
+
+/**
+ * Data de hoje no formato "AAAA-MM-DD", pro atributo `max` de
+ * `<input type="date">` e pro valor inicial dos formulários.
+ *
+ * Usa o dia no fuso da fazenda, e não `toISOString()`: depois das 21h de Brasília
+ * o ISO já devolve amanhã, e o formulário abria com a data errada enquanto o
+ * `max` passava a aceitar um dia que ainda não chegou.
+ */
 export function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return hojeNaFazenda();
 }
 
 /**
