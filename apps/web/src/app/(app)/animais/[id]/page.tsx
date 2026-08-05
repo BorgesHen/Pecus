@@ -18,24 +18,28 @@ import {
   idadeDoAnimal,
   ESPECIE_CONFIG,
   formatarGmd,
+  formatarQuantidade,
+  quantidadeLegivel,
   PESO_MAXIMO_KG,
 } from '@pecus/shared';
 import type { EventoSanitario } from '@pecus/shared';
 import {
   obterAnimal,
   darSaidaAnimal,
+  obterCustoDoAnimal,
   obterHistoricoPeso,
   criarPesagemAnimal,
   removerPesagemAnimal,
   type AnimalComLote,
   type HistoricoPesoAnimal,
+  type CustoAnimal,
   type PesagemDoAnimal,
 } from '@/lib/animais';
 import { PopupConfirmacao } from '@/components/PopupConfirmacao';
 import {
   listarEventosPorAnimal,
   criarEventoSanitario,
-  type NovoEventoSanitario,
+  type EventoSanitarioComInsumo,
 } from '@/lib/sanidade';
 import {
   listarEventosReprodutivosPorAnimal,
@@ -43,9 +47,27 @@ import {
   type EventoReprodutivoComCria,
 } from '@/lib/reproducao';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
+import { CustoDoAnimal } from '@/components/CustoDoAnimal';
+import { CampoInsumoAplicado } from '@/components/CampoInsumoAplicado';
+import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { brData, hojeISO } from '@/lib/data';
+import { brlOuTraco } from '@/lib/formato';
+
+/**
+ * "5 ml de Ivermectina" a partir do que está gravado.
+ *
+ * A quantidade fica no banco na unidade de CADASTRO do insumo (0,005 quando se
+ * aplicou 5 ml de um produto em litro), então a conversão de volta precisa da
+ * unidade do insumo — não da unidade digitada.
+ */
+function descreverInsumoAplicado(evento: EventoSanitarioComInsumo): string {
+  if (!evento.insumo) return '—';
+  if (evento.quantidadeInsumo == null) return evento.insumo.nome;
+  const legivel = quantidadeLegivel(evento.quantidadeInsumo, evento.insumo.unidade);
+  return `${formatarQuantidade(legivel.quantidade, legivel.unidade)} de ${evento.insumo.nome}`;
+}
 
 export default function DetalheAnimalPage() {
   const toast = useToast();
@@ -57,10 +79,13 @@ export default function DetalheAnimalPage() {
   // o "ver" do módulo, a ficha não mostra peso nenhum — em vez de mostrar "—",
   // que pareceria animal sem pesagem.
   const podeRegistrarPesagem = podeEditar(ModuloSistema.PESAGENS);
+  // O custo é informação financeira (compra do lote, gastos rateados), então
+  // segue a permissão de Gastos e não a de Animais — igual à rota.
+  const podeVerCusto = podeAcessar(ModuloSistema.GASTOS);
   const podeVerPesagens = podeAcessar(ModuloSistema.PESAGENS);
 
   const [animal, setAnimal] = useState<AnimalComLote | null>(null);
-  const [eventosSanitarios, setEventosSanitarios] = useState<EventoSanitario[] | null>(null);
+  const [eventosSanitarios, setEventosSanitarios] = useState<EventoSanitarioComInsumo[] | null>(null);
   const [erro, setErro] = useState('');
   const [modalSaidaAberto, setModalSaidaAberto] = useState(false);
   const [statusSaida, setStatusSaida] = useState<StatusAnimal>(StatusAnimal.VENDIDO);
@@ -74,14 +99,22 @@ export default function DetalheAnimalPage() {
   const [modalPesagemAberto, setModalPesagemAberto] = useState(false);
   const [formPesagem, setFormPesagem] = useState({ data: hojeISO(), peso: '', observacao: '' });
   const [pesagemParaExcluir, setPesagemParaExcluir] = useState<PesagemDoAnimal | null>(null);
+  const [custo, setCusto] = useState<CustoAnimal | null>(null);
+  const [insumos, setInsumos] = useState<InsumoComSaldo[]>([]);
 
   const [modalSanidadeAberto, setModalSanidadeAberto] = useState(false);
-  const [formSanidade, setFormSanidade] = useState<Omit<NovoEventoSanitario, 'animalId'>>({
+  // Tipo próprio do formulário, e não o do DTO: no formulário a quantidade
+  // vazia é '' (input controlado) e no DTO é undefined. Misturar os dois é o que
+  // faz o campo virar NaN ao apagar o número.
+  const [formSanidade, setFormSanidade] = useState({
     tipo: TipoEventoSanitario.VACINA,
     nome: '',
     data: new Date().toISOString().slice(0, 10),
     proximaAplicacao: '',
     observacao: '',
+    insumoId: '',
+    quantidadeInsumo: '' as number | '',
+    unidadeInsumo: '',
   });
 
   const [eventosReprodutivos, setEventosReprodutivos] = useState<EventoReprodutivoComCria[] | null>(null);
@@ -105,6 +138,11 @@ export default function DetalheAnimalPage() {
     // responde 403, e um erro previsível não precisa virar requisição.
     if (podeVerPesagens) {
       obterHistoricoPeso(animalId).then(setHistoricoPeso).catch(() => setHistoricoPeso(null));
+    }
+    // Mesmo critério do peso: sem a permissão de Gastos a rota responde 403, e
+    // um erro previsível não precisa virar requisição.
+    if (podeVerCusto) {
+      obterCustoDoAnimal(animalId).then(setCusto).catch(() => setCusto(null));
     }
   }
 
@@ -174,20 +212,33 @@ export default function DetalheAnimalPage() {
     const rotulo = LABEL_TIPO_EVENTO_SANITARIO[formSanidade.tipo];
     const nomeEvento = formSanidade.nome;
     try {
-      await criarEventoSanitario({
-        ...formSanidade,
+      const { insumoId, quantidadeInsumo, unidadeInsumo, ...campos } = formSanidade;
+      const evento = await criarEventoSanitario({
+        ...campos,
         animalId,
-        proximaAplicacao: formSanidade.proximaAplicacao || undefined,
-        observacao: formSanidade.observacao || undefined,
+        proximaAplicacao: campos.proximaAplicacao || undefined,
+        observacao: campos.observacao || undefined,
+        // Os três andam juntos: sem insumo escolhido não há baixa nem custo, e o
+        // servidor recusa insumo sem quantidade.
+        ...(insumoId && quantidadeInsumo !== ''
+          ? { insumoId, quantidadeInsumo: Number(quantidadeInsumo), unidadeInsumo: unidadeInsumo || undefined }
+          : {}),
       });
       setModalSanidadeAberto(false);
-      toast.sucesso(`${rotulo} "${nomeEvento}" registrada neste animal.`);
+      const custoDoEvento = evento.custo != null ? ` Custo do insumo: ${brlOuTraco(evento.custo)}.` : '';
+      toast.sucesso(`${rotulo} "${nomeEvento}" registrada neste animal.${custoDoEvento}`);
+      // Aviso é alerta, não erro: o evento foi gravado (estoque negativo, ou
+      // insumo sem valor de compra).
+      if (evento.aviso) toast.erro(evento.aviso);
       setFormSanidade({
         tipo: TipoEventoSanitario.VACINA,
         nome: '',
         data: new Date().toISOString().slice(0, 10),
         proximaAplicacao: '',
         observacao: '',
+        insumoId: '',
+        quantidadeInsumo: '',
+        unidadeInsumo: '',
       });
       carregar();
     } catch (e) {
@@ -199,6 +250,9 @@ export default function DetalheAnimalPage() {
 
   useEffect(() => {
     carregar();
+    // Falha em silêncio: sem o módulo Estoque a rota responde 403 e o campo de
+    // insumo simplesmente não aparece — o manejo continua registrável.
+    listarInsumos().then(setInsumos).catch(() => setInsumos([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animalId]);
 
@@ -266,8 +320,11 @@ export default function DetalheAnimalPage() {
         <div className="acoes-celula">
           {/* "Alterações": a tela já tem "Histórico sanitário" e "Histórico
               reprodutivo", então um botão só "Histórico" seria ambíguo. */}
+          {/* Animal + Pesagem: o histórico do bicho junta as edições dele com
+              o cadastro e a exclusão das pesagens. Quem não tem o módulo
+              Pesagens recebe só as linhas de Animais (a rota descarta). */}
           <BotaoHistorico
-            entidade={EntidadeAtividade.ANIMAL}
+            entidade={[EntidadeAtividade.ANIMAL, EntidadeAtividade.PESAGEM]}
             registroId={animal.id}
             rotulo="Alterações"
             titulo={`Histórico do animal ${animal.identificador}`}
@@ -344,6 +401,10 @@ export default function DetalheAnimalPage() {
           </p>
         )}
       </div>
+
+      {/* Custo antes das pesagens: é o número que resume o animal, e ele
+          depende do que está lançado abaixo (remédio, exame). */}
+      {podeVerCusto && custo && <CustoDoAnimal custo={custo} />}
 
       {/* Peso e GMD pertencem ao módulo Pesagens: sem acesso a ele, a
           seção não aparece — melhor do que mostrar "nenhuma pesagem",
@@ -524,6 +585,10 @@ export default function DetalheAnimalPage() {
                 <th>Data</th>
                 <th>Tipo</th>
                 <th>Nome</th>
+                <th>Insumo aplicado</th>
+                {/* O custo é dinheiro: só aparece pra quem tem Gastos, igual ao
+                    card de custo acima. */}
+                {podeVerCusto && <th>Custo</th>}
                 <th>Próxima aplicação</th>
               </tr>
             </thead>
@@ -533,6 +598,8 @@ export default function DetalheAnimalPage() {
                   <td data-label="Data">{brData(e.data)}</td>
                   <td data-label="Tipo">{LABEL_TIPO_EVENTO_SANITARIO[e.tipo]}</td>
                   <td data-label="Nome">{e.nome}</td>
+                  <td data-label="Insumo aplicado">{descreverInsumoAplicado(e)}</td>
+                  {podeVerCusto && <td data-label="Custo">{brlOuTraco(e.custo ?? null)}</td>}
                   <td data-label="Próxima aplicação">{brData(e.proximaAplicacao)}</td>
                 </tr>
               ))}
@@ -596,6 +663,23 @@ export default function DetalheAnimalPage() {
                 </div>
               )}
             </div>
+
+            <CampoInsumoAplicado
+              insumos={insumos}
+              valor={{
+                insumoId: formSanidade.insumoId,
+                quantidade: formSanidade.quantidadeInsumo,
+                unidade: formSanidade.unidadeInsumo,
+              }}
+              onChange={(v) =>
+                setFormSanidade({
+                  ...formSanidade,
+                  insumoId: v.insumoId,
+                  quantidadeInsumo: v.quantidade,
+                  unidadeInsumo: v.unidade,
+                })
+              }
+            />
 
             <div className="modal-acoes">
               <button className="btn-secundario" onClick={() => setModalSanidadeAberto(false)}>

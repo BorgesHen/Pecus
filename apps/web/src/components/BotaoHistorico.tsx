@@ -22,6 +22,11 @@ const POR_PAGINA = 20;
  * Serve pros dois usos: no topo de uma tela (histórico do módulo inteiro) e
  * dentro de um registro (`registroId`, histórico só daquele lote/animal/área).
  * Só busca quando é aberto — a tela não paga nada por ter o botão.
+ *
+ * `entidade` aceita uma lista quando a tela junta módulos — a do animal usa
+ * `[ANIMAL, PESAGEM]` pra que cadastro e exclusão de pesagem apareçam junto
+ * das alterações do animal. A primeira da lista é a da tela: manda no título e
+ * é ela que a rota usa pra autorizar.
  */
 export function BotaoHistorico({
   entidade,
@@ -29,11 +34,17 @@ export function BotaoHistorico({
   titulo,
   rotulo = 'Histórico',
 }: {
-  entidade: EntidadeAtividade;
+  entidade: EntidadeAtividade | EntidadeAtividade[];
   registroId?: string;
   titulo?: string;
   rotulo?: string;
 }) {
+  const entidades = Array.isArray(entidade) ? entidade : [entidade];
+  const principal = entidades[0];
+  // Chave estável pro useCallback: um array literal na prop muda de identidade
+  // a cada render da tela e recriaria `carregar` sem necessidade.
+  const chaveEntidades = entidades.join(',');
+
   const toast = useToast();
   const [aberto, setAberto] = useState(false);
   const [itens, setItens] = useState<RegistroAtividade[]>([]);
@@ -47,7 +58,7 @@ export function BotaoHistorico({
       setCarregando(true);
       try {
         const resposta = await listarAtividades({
-          entidade,
+          entidade: chaveEntidades.split(',') as EntidadeAtividade[],
           registroId,
           acao: acaoAlvo || undefined,
           pagina: paginaAlvo,
@@ -63,7 +74,7 @@ export function BotaoHistorico({
         setCarregando(false);
       }
     },
-    [entidade, registroId, toast],
+    [chaveEntidades, registroId, toast],
   );
 
   useEffect(() => {
@@ -90,7 +101,7 @@ export function BotaoHistorico({
       {aberto && (
         <div className="modal-overlay" onClick={fechar}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{titulo ?? `Histórico — ${LABEL_ENTIDADE_ATIVIDADE[entidade]}`}</h3>
+            <h3>{titulo ?? `Histórico — ${LABEL_ENTIDADE_ATIVIDADE[principal]}`}</h3>
 
             <div className="campo" style={{ maxWidth: 260 }}>
               <label>Tipo de ação</label>
@@ -113,7 +124,9 @@ export function BotaoHistorico({
             ) : (
               <ListaAtividades
                 itens={itens}
-                mostrarModulo={false}
+                // Com módulos misturados a etiqueta passa a ser necessária pra
+                // distinguir "Animais" de "Pesagens" numa mesma lista.
+                mostrarModulo={entidades.length > 1}
                 vazio={
                   acao
                     ? 'Nenhuma atividade desse tipo por aqui.'

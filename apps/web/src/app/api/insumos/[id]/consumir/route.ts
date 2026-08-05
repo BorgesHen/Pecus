@@ -1,8 +1,14 @@
-import { EntidadeAtividade, ModuloSistema, NivelAcesso } from '@pecus/shared';
+import {
+  EntidadeAtividade,
+  ModuloSistema,
+  NivelAcesso,
+  formatarQuantidade,
+  quantidadeLegivel,
+} from '@pecus/shared';
 import { rota } from '@/server/rota';
 import { autorizar } from '@/server/autorizar';
 import { validarCorpo } from '@/server/validar';
-import { auditar } from '@/server/atividades/atividades.service';
+import { auditar, brl } from '@/server/atividades/atividades.service';
 import * as insumosService from '@/server/insumos/insumos.service';
 import { RegistrarConsumoDto } from '@/server/insumos/dto';
 
@@ -13,11 +19,13 @@ export const POST = rota(async (req, { params }) => {
   });
   const dto = await validarCorpo(req, RegistrarConsumoDto);
   const movimento = await insumosService.registrarConsumo(empresaId, params.id, dto);
+  const legivel = quantidadeLegivel(movimento.quantidade, movimento.insumo.unidade);
+  const valor = movimento.valorTotal != null ? ` (${brl(movimento.valorTotal)})` : '';
   await auditar(user, empresaId).movimentacao(
     EntidadeAtividade.INSUMO,
     params.id,
-    `Baixa de ${movimento.quantidade} ${movimento.insumo.unidade} de "${movimento.insumo.nome}"`,
-    { observacao: dto.observacao ?? null },
+    `Baixa de ${formatarQuantidade(legivel.quantidade, legivel.unidade)} de "${movimento.insumo.nome}"${valor}`,
+    { observacao: dto.observacao ?? null, valorTotal: movimento.valorTotal, saldoDepois: movimento.saldoDepois },
   );
   return movimento;
 });

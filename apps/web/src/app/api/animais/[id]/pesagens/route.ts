@@ -24,11 +24,13 @@ export const POST = rota(async (req, { params }) => {
   });
   const dto = await validarCorpo(req, CriarPesagemAnimalDto);
   const pesagem = await pesagemAnimalService.criar(empresaId, params.id, dto);
-  await auditar(user, empresaId).criacao(
+  // `noContexto(animalId)` é o que faz esta linha aparecer no histórico do
+  // próprio animal, e não só no histórico do módulo Pesagens.
+  await auditar(user, empresaId).noContexto(params.id).criacao(
     EntidadeAtividade.PESAGEM,
     pesagem.id,
     `Pesagem do animal ${pesagem.animalIdentificador}: ${pesagem.peso} kg`,
-    { animalId: params.id },
+    { animalId: params.id, data: pesagem.data },
   );
   return pesagem;
 });

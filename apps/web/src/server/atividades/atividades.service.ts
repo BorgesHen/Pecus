@@ -18,7 +18,9 @@ const POR_PAGINA_PADRAO = 50;
 export type AutorAtividade = Pick<UsuarioAutenticado, 'id' | 'nome' | 'email'>;
 
 export interface FiltrosAtividade {
-  entidade?: EntidadeAtividade;
+  /** Uma entidade, ou várias quando a tela junta módulos (animal + pesagens). */
+  entidade?: EntidadeAtividade | EntidadeAtividade[];
+  /** Casa tanto o registro afetado quanto o registro dono — ver `contextoId`. */
   registroId?: string;
   acao?: AcaoAtividade;
   autorId?: string;
@@ -32,6 +34,7 @@ export interface FiltrosAtividade {
 
 interface DadosRegistro {
   registroId?: string | null;
+  contextoId?: string | null;
   detalhes?: Record<string, unknown> | null;
 }
 
@@ -68,6 +71,7 @@ async function registrar(
         acao,
         entidade,
         registroId: dados.registroId ?? null,
+        contextoId: dados.contextoId ?? null,
         descricao,
         detalhes: (dados.detalhes ?? undefined) as Prisma.InputJsonValue | undefined,
         autorId: autor.id,
@@ -88,16 +92,29 @@ async function registrar(
  * com furos é pior que não ter histórico.
  */
 export function auditar(autor: AutorAtividade, empresaId: string | null | undefined) {
-  const comAcao =
-    (acao: AcaoAtividade) =>
-    (entidade: EntidadeAtividade, registroId: string | null, descricao: string, detalhes?: Record<string, unknown>) =>
-      registrar(empresaId, autor, acao, entidade, descricao, { registroId, detalhes });
+  const acoes = (contextoId: string | null) => {
+    const comAcao =
+      (acao: AcaoAtividade) =>
+      (entidade: EntidadeAtividade, registroId: string | null, descricao: string, detalhes?: Record<string, unknown>) =>
+        registrar(empresaId, autor, acao, entidade, descricao, { registroId, contextoId, detalhes });
+
+    return {
+      criacao: comAcao(AcaoAtividade.CRIACAO),
+      atualizacao: comAcao(AcaoAtividade.ATUALIZACAO),
+      exclusao: comAcao(AcaoAtividade.EXCLUSAO),
+      movimentacao: comAcao(AcaoAtividade.MOVIMENTACAO),
+    };
+  };
 
   return {
-    criacao: comAcao(AcaoAtividade.CRIACAO),
-    atualizacao: comAcao(AcaoAtividade.ATUALIZACAO),
-    exclusao: comAcao(AcaoAtividade.EXCLUSAO),
-    movimentacao: comAcao(AcaoAtividade.MOVIMENTACAO),
+    ...acoes(null),
+    /**
+     * `auditar(user, empresaId).noContexto(animalId).criacao(...)` — prende o
+     * evento ao registro dono, pra ele aparecer no histórico daquela tela de
+     * detalhe. Método próprio em vez de um quinto parâmetro solto: `criacao(a,
+     * b, c, d, e)` não diria a ninguém o que é o quinto argumento.
+     */
+    noContexto: (contextoId: string) => acoes(contextoId),
   };
 }
 
@@ -109,8 +126,15 @@ export function brl(valor: number) {
 function montarWhere(empresaId: string, filtros: FiltrosAtividade): Prisma.RegistroAtividadeWhereInput {
   const where: Prisma.RegistroAtividadeWhereInput = { empresaId };
 
-  if (filtros.entidade) where.entidade = filtros.entidade;
-  if (filtros.registroId) where.registroId = filtros.registroId;
+  if (filtros.entidade) {
+    where.entidade = Array.isArray(filtros.entidade) ? { in: filtros.entidade } : filtros.entidade;
+  }
+  // O histórico de um registro traz o que mexeu nele E o que aconteceu dentro
+  // dele: a pesagem do animal tem `registroId` da pesagem e `contextoId` do
+  // animal, então filtrar só por `registroId` deixaria a pesagem de fora.
+  if (filtros.registroId) {
+    where.OR = [{ registroId: filtros.registroId }, { contextoId: filtros.registroId }];
+  }
   if (filtros.acao) where.acao = filtros.acao;
   if (filtros.autorId) where.autorId = filtros.autorId;
   // Busca livre na descrição já pronta — é o texto que a pessoa vê na tela.

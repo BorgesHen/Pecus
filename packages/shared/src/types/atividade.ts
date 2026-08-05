@@ -7,6 +7,8 @@ export interface RegistroAtividade {
   acao: AcaoAtividade;
   entidade: EntidadeAtividade;
   registroId?: string | null;
+  /** Registro "dono" do evento (o animal de uma pesagem, por exemplo). */
+  contextoId?: string | null;
   descricao: string;
   detalhes?: Record<string, unknown> | null;
   autorId?: string | null;

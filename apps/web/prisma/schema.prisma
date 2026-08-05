@@ -380,6 +380,8 @@ model Animal {
   pesagens            PesagemAnimal[]
 
   @@unique([empresaId, identificador])
+  /// O acompanhamento do lote pergunta exatamente isto: os animais ativos de um lote.
+  @@index([empresaId, loteId, status])
 }
 
 model EventoSanitario {
@@ -390,6 +392,28 @@ model EventoSanitario {
   nome             String
   data             DateTime
   proximaAplicacao DateTime?
+
+  // ----- Insumo aplicado (o que liga o manejo ao estoque e ao custo do bicho) -----
+  // Opcionais: manejo sem produto existe (exame, avaliação de escore) e os
+  // eventos lançados antes disso não têm como preencher.
+  insumoId          String?
+  /// Quantidade consumida, SEMPRE na unidade de cadastro do insumo (0.005 quando
+  /// se aplicou 5 ml de um produto cadastrado em litro). Guardar na unidade base
+  /// é o que permite somar com o saldo do estoque sem converter de novo.
+  quantidadeInsumo  Float?
+  /// A unidade que o produtor escolheu no lançamento ("ml"). Só pra exibir o
+  /// evento como ele foi digitado — a conta usa `quantidadeInsumo`.
+  unidadeInsumo     String?
+  /// Custo do insumo aplicado, congelado no dia da aplicação. É snapshot de
+  /// propósito: o custo médio do estoque muda a cada compra nova, e o que este
+  /// animal custou não pode mudar retroativamente. Nulo = insumo sem valor de
+  /// compra conhecido.
+  custo             Decimal?            @db.Decimal(12, 2)
+  /// A saída de estoque que esta aplicação gerou. Numa aplicação em massa, os
+  /// eventos de todos os animais apontam pro mesmo movimento (uma baixa só, com
+  /// o total consumido — 50 linhas no extrato do estoque por uma vacinação
+  /// tornariam o extrato ilegível).
+  movimentoInsumoId String?
   /// Grau FAMACHA 1-5 (cor da mucosa ocular) — manejo ovino, base do
   /// tratamento seletivo contra verminose.
   escoreFamacha    Int?
@@ -398,8 +422,16 @@ model EventoSanitario {
   observacao       String?
   createdAt        DateTime            @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  animal  Animal  @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  empresa         Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  animal          Animal           @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  insumo          Insumo?          @relation(fields: [insumoId], references: [id])
+  movimentoInsumo MovimentoInsumo? @relation(fields: [movimentoInsumoId], references: [id])
+
+  // Sem índice nenhum até aqui. Estes são os três caminhos de leitura que a tela
+  // do animal e o acompanhamento do lote usam.
+  @@index([empresaId, animalId, data])
+  @@index([empresaId, data])
+  @@index([empresaId, proximaAplicacao])
 }
 
 /// Evento reprodutivo ligado à matriz/touro (animalId). Quando tipo = PARTO e a
@@ -487,6 +519,8 @@ model Gasto {
   lote             Lote?             @relation(fields: [loteId], references: [id])
   insumo           Insumo?           @relation(fields: [insumoId], references: [id])
   movimentosInsumo MovimentoInsumo[]
+
+  @@index([empresaId, loteId])
 }
 
 model Insumo {
@@ -497,9 +531,10 @@ model Insumo {
   estoqueMinimo Float?
   createdAt     DateTime @default(now())
 
-  empresa    Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  movimentos MovimentoInsumo[]
-  gastos     Gasto[]
+  empresa           Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimentos        MovimentoInsumo[]
+  gastos            Gasto[]
+  eventosSanitarios EventoSanitario[]
 
   @@unique([empresaId, nome])
 }
@@ -509,15 +544,30 @@ model MovimentoInsumo {
   empresaId  String
   insumoId   String
   tipo       TipoMovimentoInsumo
+  /// Sempre na unidade de cadastro do insumo — ver unidades.ts.
   quantidade Float
   data       DateTime
+  /// Quanto este movimento vale em reais.
+  ///
+  /// Na ENTRADA é o que se pagou (vem do gasto da compra, ou digitado na entrada
+  /// manual). É daqui que sai o custo médio do insumo: soma dos valores ÷ soma
+  /// das quantidades. Nulo = entrada sem valor (saldo inicial, ajuste de
+  /// inventário, doação), que fica fora da média em vez de entrar como zero.
+  ///
+  /// Na SAÍDA é o custo do que saiu, ao custo médio do dia — é o que permite
+  /// dizer quanto os 5 ml aplicados naquele animal custaram.
+  valorTotal Decimal?            @db.Decimal(12, 2)
   gastoId    String?
   observacao String?
   createdAt  DateTime            @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  insumo  Insumo  @relation(fields: [insumoId], references: [id], onDelete: Cascade)
-  gasto   Gasto?  @relation(fields: [gastoId], references: [id])
+  empresa           Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  insumo            Insumo            @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  gasto             Gasto?            @relation(fields: [gastoId], references: [id])
+  eventosSanitarios EventoSanitario[]
+
+  @@index([empresaId, insumoId, tipo])
+  @@index([insumoId, data])
 }
 
 /// Grupo de nível 1 do plano de contas financeiro (ex: "Custos Variáveis").
@@ -643,6 +693,13 @@ model RegistroAtividade {
   /// usa pra filtrar. Nulo quando a ação não tem um registro único (ex:
   /// aplicação sanitária em massa, alteração das configurações da fazenda).
   registroId String?
+  /// Id do registro "dono" do evento, quando o afetado vive dentro de outro:
+  /// uma pesagem tem `registroId` = id da pesagem e `contextoId` = id do
+  /// animal. Sem isso o histórico do animal não teria como mostrar as pesagens
+  /// dele — o id da pesagem não bate com o id do animal. Coluna separada, e não
+  /// `registroId` sobrescrito, pra que "qual registro esta linha alterou?"
+  /// continue tendo uma resposta só.
+  contextoId String?
   /// Texto pronto pra ler: "Lote 25/26 A excluído".
   descricao  String
   /// Complemento opcional (campos alterados, quantidades). Nunca guarda senha,
@@ -662,5 +719,6 @@ model RegistroAtividade {
   @@index([empresaId, createdAt])
   @@index([empresaId, entidade, createdAt])
   @@index([empresaId, entidade, registroId])
+  @@index([empresaId, contextoId])
   @@index([empresaId, acao, createdAt])
 }

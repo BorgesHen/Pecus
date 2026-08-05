@@ -3,6 +3,12 @@ import type { Insumo, MovimentoInsumo } from '@pecus/shared';
 
 export interface InsumoComSaldo extends Insumo {
   saldoAtual: number;
+  /** R$ por unidade de cadastro, pela média das compras. Nulo = nenhuma entrada com valor. */
+  custoUnitario: number | null;
+  /** saldoAtual × custoUnitario. Nulo quando não há custo — zero diria "não vale nada". */
+  valorEmEstoque: number | null;
+  /** Unidades aceitas ao lançar consumo (L aceita ml, kg aceita g). */
+  unidadesAceitas: string[];
 }
 
 export interface NovoInsumo {
@@ -33,12 +39,27 @@ export function listarMovimentosInsumo(id: string) {
 
 export interface MovimentoManual {
   quantidade: number;
+  /** Unidade da quantidade; ausente = unidade de cadastro do insumo. */
+  unidade?: string;
   data: string;
   observacao?: string;
+  /** Só na entrada: quanto se pagou. É o que alimenta o custo médio do insumo. */
+  valorTotal?: number;
+}
+
+/** Baixa de estoque com o custo do que saiu, e aviso quando o saldo fica negativo. */
+export interface ConsumoRegistrado {
+  id: string;
+  quantidade: number;
+  valorTotal: number | null;
+  custoUnitario: number | null;
+  saldoDepois: number;
+  aviso: string | null;
+  insumo: { nome: string; unidade: string };
 }
 
 export function registrarConsumo(id: string, dados: MovimentoManual) {
-  return api<MovimentoInsumo>(`/insumos/${id}/consumir`, { method: 'POST', body: dados });
+  return api<ConsumoRegistrado>(`/insumos/${id}/consumir`, { method: 'POST', body: dados });
 }
 
 /** Entrada lançada à mão (saldo inicial, ajuste, produção própria) — sem gasto vinculado. */

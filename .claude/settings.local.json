@@ -102,7 +102,22 @@
       "Bash(node setup-gmd.js)",
       "Bash(node diag-rls.js)",
       "Bash(cp ctx-gmd.json ctx-gmd-bkp.json)",
-      "Bash(node setup-atividades.js)"
+      "Bash(node setup-atividades.js)",
+      "Bash(grep -oE '^\\(DATABASE_URL|DIRECT_URL\\)=.{0,40}' .env)",
+      "Bash(nc -z -G 5 db.rsivoyllbjuqeaprdxuo.supabase.co 5432)",
+      "Bash(NEXT_DIST_DIR=.next-claude npx next lint --file src/components/BotaoHistorico.tsx --file src/app/api/atividades/route.ts --file src/lib/atividades.ts)",
+      "Bash(NEXT_DIST_DIR=.next-claude npx next lint --file src/components/BotaoHistorico.tsx --file src/app/api/atividades/route.ts --file src/lib/atividades.ts --file \"src/app/\\(app\\)/animais/[id]/page.tsx\")",
+      "Bash(node testa-historico-pesagem.js)",
+      "Bash(sed -n '/export class CriarLoteDto/,/^}/p' apps/web/src/server/lotes/dto.ts)",
+      "Bash(sed -n '/MODULO_DA_ENTIDADE/,/^};/p' packages/shared/src/enums/atividade.ts)",
+      "Bash(sed 's#ctx-gmd.json#ctx-hist.json#' limpa-gmd.js)",
+      "Bash(node limpa-hist.js)",
+      "Bash(sed -i '' \"s#'../../../../Users/sollucao/Downloads/pecus/packages/shared/src/index'#'/Users/sollucao/Downloads/pecus/packages/shared/src/index'#\" testa-unidades.ts)",
+      "Bash(node testa-custo.js)",
+      "Bash(sed 's#ctx-gmd.json#ctx-custo.json#' limpa-gmd.js)",
+      "Bash(node limpa-custo.js)",
+      "Bash(node ui-custo.js)",
+      "Bash(echo \"EXIT=$?\")"
     ],
     "additionalDirectories": [
       "/Users/sollucao/Downloads/pecus/apps/web/apps/web/src/app/(app)/lotes/[id]"

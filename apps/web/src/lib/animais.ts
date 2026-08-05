@@ -1,5 +1,7 @@
 import { api } from './api';
-import type { Animal, Lote, ResultadoGmdAnimal, StatusAnimal } from '@pecus/shared';
+import type { Animal, CustoAnimal, Lote, ResultadoGmdAnimal, StatusAnimal } from '@pecus/shared';
+
+export type { CustoAnimal };
 
 export interface AnimalComLote extends Animal {
   lote?: Lote | null;
@@ -75,4 +77,16 @@ export function criarPesagemAnimal(animalId: string, dados: NovaPesagemAnimal) {
 
 export function removerPesagemAnimal(animalId: string, pesagemId: string) {
   return api<{ ok: boolean }>(`/animais/${animalId}/pesagens/${pesagemId}`, { method: 'DELETE' });
+}
+
+// ----- Custo de produção do animal -----
+
+/**
+ * Custo individual do animal. O `total` soma compra + rateio + diretos; as
+ * `ressalvas` dizem em português o que falta pro número estar completo (lote sem
+ * dados de compra, insumo sem valor), pra a tela não exibir um total que parece
+ * fechado e não está.
+ */
+export function obterCustoDoAnimal(animalId: string) {
+  return api<CustoAnimal>(`/animais/${animalId}/custo`);
 }

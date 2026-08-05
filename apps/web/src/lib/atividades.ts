@@ -9,7 +9,12 @@ import type {
 export type { RegistroAtividade };
 
 export interface FiltrosAtividades {
-  entidade?: EntidadeAtividade;
+  /**
+   * Uma entidade, ou várias separadas por vírgula na URL. A primeira é a da
+   * tela (é ela que a rota usa pra autorizar); as outras entram como
+   * complemento — ver a rota /atividades.
+   */
+  entidade?: EntidadeAtividade | EntidadeAtividade[];
   /** Histórico de um registro específico (o botão das telas de detalhe). */
   registroId?: string;
   acao?: AcaoAtividade;
@@ -26,7 +31,9 @@ export function listarAtividades(filtros: FiltrosAtividades = {}) {
   for (const [chave, valor] of Object.entries(filtros)) {
     // Filtro vazio não vira parâmetro: `entidade=` na URL seria recusado pelo
     // backend como módulo inválido.
-    if (valor !== undefined && valor !== '') params.set(chave, String(valor));
+    if (valor === undefined || valor === '') continue;
+    // Lista de entidades vira "animal,pesagem" — o formato que a rota espera.
+    params.set(chave, Array.isArray(valor) ? valor.join(',') : String(valor));
   }
   const query = params.toString();
   return api<PaginaAtividades>(`/atividades${query ? `?${query}` : ''}`);

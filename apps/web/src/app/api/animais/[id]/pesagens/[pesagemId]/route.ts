@@ -15,7 +15,7 @@ export const DELETE = rota(async (req, { params }) => {
     permissao: { modulo: ModuloSistema.PESAGENS, nivel: NivelAcesso.EDITAR },
   });
   const resultado = await pesagemAnimalService.remover(empresaId, params.id, params.pesagemId);
-  await auditar(user, empresaId).exclusao(
+  await auditar(user, empresaId).noContexto(params.id).exclusao(
     EntidadeAtividade.PESAGEM,
     params.pesagemId,
     `Pesagem de ${resultado.peso} kg excluída do animal`,

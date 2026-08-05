@@ -17,9 +17,13 @@ import {
 } from '@pecus/shared';
 import {
   obterLote,
+  obterCoberturaLote,
+  obterCustosDoLote,
   atualizarLote,
   trocarMetodoLote,
   listarMetodosManejo,
+  type CoberturaLote,
+  type CustosDoLote,
   type LoteDetalhado,
 } from '@/lib/lotes';
 import { listarAreas, type AreaComContagem } from '@/lib/areas';
@@ -28,6 +32,7 @@ import { hojeISO } from '@/lib/data';
 import { indicadoresMetodo, type IndicadoresMetodo } from '@/lib/relatorios';
 import { listarAnimais } from '@/lib/animais';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
+import { AcompanhamentoLote } from '@/components/AcompanhamentoLote';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
 import { SimuladorCompra, type DadosCompraSimulada } from '@/components/SimuladorCompra';
@@ -36,15 +41,18 @@ export default function DetalheLotePage() {
   const toast = useToast();
   const params = useParams<{ id: string }>();
   const loteId = params.id;
-  const { podeEditar, temRecurso } = usePermissoes();
+  const { podeEditar, podeAcessar, temRecurso } = usePermissoes();
   const temOvinos = temRecurso(RECURSO_OVINOS);
   const podeRegistrarPesagem = podeEditar(ModuloSistema.PESAGENS);
   const podeEditarLote = podeEditar(ModuloSistema.LOTES);
+  const podeVerGastos = podeAcessar(ModuloSistema.GASTOS);
 
   const [lote, setLote] = useState<LoteDetalhado | null>(null);
   const [gmd, setGmd] = useState<Gmd | null>(null);
   const [indicadores, setIndicadores] = useState<IndicadoresMetodo | null>(null);
   const [totalAnimaisCadastrados, setTotalAnimaisCadastrados] = useState<number | null>(null);
+  const [cobertura, setCobertura] = useState<CoberturaLote | null>(null);
+  const [custos, setCustos] = useState<CustosDoLote | null>(null);
   const [metodos, setMetodos] = useState<MetodoManejo[]>([]);
   const [areas, setAreas] = useState<AreaComContagem[]>([]);
   const [erro, setErro] = useState('');
@@ -76,6 +84,12 @@ export default function DetalheLotePage() {
     listarAnimais({ loteId })
       .then((lista) => setTotalAnimaisCadastrados(lista.length))
       .catch(() => setTotalAnimaisCadastrados(null));
+    obterCoberturaLote(loteId).then(setCobertura).catch(() => setCobertura(null));
+    // Custo individual é informação financeira: sem o módulo Gastos a rota
+    // responde 403 e a seção simplesmente não aparece.
+    if (podeVerGastos) {
+      obterCustosDoLote(loteId).then(setCustos).catch(() => setCustos(null));
+    }
   }
 
   useEffect(() => {
@@ -382,6 +396,71 @@ export default function DetalheLotePage() {
 
       {gmd?.mensagem && (
         <p style={{ color: 'var(--texto-suave)', marginBottom: 24, fontSize: 14 }}>{gmd.mensagem}</p>
+      )}
+
+      {cobertura && <AcompanhamentoLote cobertura={cobertura} />}
+
+      {custos && custos.animais.length > 0 && (
+        <>
+          <h3 style={{ marginBottom: 4 }}>Custo individual dos animais</h3>
+          <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>
+            {/* Compra e rateio são iguais pra todo o lote, então a ordenação é o
+                ranking do que foi lançado direto em cada bicho. */}
+            Compra e rateio são iguais para todos os animais do lote — a diferença entre um e outro
+            está no que foi lançado direto em cada um (remédio, exame).
+            {custos.comum.compraPorCabeca != null &&
+              ` Compra: ${brl(custos.comum.compraPorCabeca)}/cabeça.`}
+            {custos.comum.rateioPorCabeca != null &&
+              ` Rateio: ${brl(custos.comum.rateioPorCabeca)}/cabeça` +
+                (custos.comum.cabecas ? ` (${brl(custos.comum.totalRateavel ?? 0)} ÷ ${custos.comum.cabecas}).` : '.')}
+          </p>
+
+          <div className="tabela-wrap" style={{ marginBottom: 8 }}>
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>Animal</th>
+                  <th>Compra</th>
+                  <th>Rateio</th>
+                  <th>Direto no animal</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {custos.animais.map((linha) => (
+                  <tr key={linha.animalId}>
+                    <td data-label="Animal">
+                      <Link href={`/animais/${linha.animalId}`}>{linha.identificador}</Link>
+                    </td>
+                    <td data-label="Compra">{linha.compra != null ? brl(linha.compra) : '—'}</td>
+                    <td data-label="Rateio">{brl(linha.rateio)}</td>
+                    <td data-label="Direto no animal">
+                      {linha.direto > 0 ? <strong>{brl(linha.direto)}</strong> : '—'}
+                      {linha.lancamentosSemValor > 0 && (
+                        <span
+                          style={{ color: 'var(--texto-suave)' }}
+                          title="Insumo aplicado sem valor de compra registrado."
+                        >
+                          {' '}
+                          +{linha.lancamentosSemValor} sem valor
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="Total">{brl(linha.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {custos.ressalvas.length > 0 && (
+            <ul style={{ marginBottom: 24, paddingLeft: 20, color: 'var(--texto-suave)', fontSize: 13 }}>
+              {custos.ressalvas.map((ressalva) => (
+                <li key={ressalva}>{ressalva}</li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       <h3 style={{ marginBottom: 12 }}>Evolução do peso</h3>

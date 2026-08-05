@@ -8,6 +8,7 @@ import type {
   LoteMetodoHistorico,
   TipoMetodoManejo,
   EspecieAnimal,
+  StatusAnimal,
 } from '@pecus/shared';
 
 export interface LoteComContagem extends Lote {
@@ -85,4 +86,107 @@ export function criarMetodoManejo(nome: string, tipo: TipoMetodoManejo) {
 
 export function removerMetodoManejo(id: string) {
   return api<{ ok: true }>(`/metodos-manejo/${id}`, { method: 'DELETE' });
+}
+
+// ----- Acompanhamento do lote (quem falta pesar / quem falta no manejo) -----
+
+/** Animal que está pendente numa rodada. As listas vêm recortadas: `total` é o número real. */
+export interface ListaRecortada<T> {
+  total: number;
+  itens: T[];
+}
+
+export interface AnimalPendente {
+  id: string;
+  identificador: string;
+}
+
+export interface ManejoSanitarioDoLote {
+  nome: string;
+  data: string;
+  aplicados: number;
+  pendentes: ListaRecortada<AnimalPendente>;
+}
+
+export interface CoberturaLote {
+  lote: {
+    id: string;
+    identificacao: string;
+    especie: string;
+    quantidadeDeclarada: number;
+    dataAquisicao: string;
+  };
+  rebanho: {
+    declarado: number;
+    cadastrados: number;
+    ativos: number;
+    /** Declarado − ativos. Positivo = cabeças sem cadastro individual. */
+    divergencia: number;
+    baixas: {
+      total: number;
+      porStatus: { status: StatusAnimal; quantidade: number }[];
+      ultimas: {
+        id: string;
+        identificador: string;
+        status: StatusAnimal;
+        dataSaida: string;
+        motivoSaida?: string | null;
+      }[];
+    };
+  };
+  /** Nulo quando quem pediu não tem o módulo Pesagens. */
+  pesagem: {
+    referencia: string;
+    origemReferencia: 'pesagem-do-lote' | 'aquisicao';
+    pesoMedioNaReferencia: number | null;
+    pesados: number;
+    pendentes: ListaRecortada<AnimalPendente>;
+  } | null;
+  /** Nulo quando quem pediu não tem o módulo Sanidade. */
+  sanidade: {
+    manejos: ManejoSanitarioDoLote[];
+    semRegistro: ListaRecortada<AnimalPendente>;
+    reaplicacoesVencidas: ListaRecortada<{
+      animalId: string;
+      identificador: string;
+      nome: string;
+      proximaAplicacao: string;
+    }>;
+    custoInsumosAplicados: number;
+  } | null;
+}
+
+export function obterCoberturaLote(id: string) {
+  return api<CoberturaLote>(`/lotes/${id}/cobertura`);
+}
+
+// ----- Custo individual dos animais do lote -----
+
+export interface CustoAnimalDoLote {
+  animalId: string;
+  identificador: string;
+  compra: number | null;
+  rateio: number;
+  direto: number;
+  total: number;
+  lancamentosSemValor: number;
+}
+
+export interface CustosDoLote {
+  lote: { id: string; identificacao: string };
+  /** Parcelas iguais pra todo o lote — a tela mostra uma vez. */
+  comum: {
+    compraPorCabeca: number | null;
+    rateioPorCabeca: number | null;
+    totalRateavel: number | null;
+    comprasDeInsumo: number | null;
+    cabecas: number | null;
+  };
+  ressalvas: string[];
+  totalDiretoDoLote: number;
+  animais: CustoAnimalDoLote[];
+}
+
+export function obterCustosDoLote(id: string) {
+  return api<CustosDoLote>(`/lotes/${id}/custos`);
 }

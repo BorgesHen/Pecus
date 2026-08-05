@@ -9,6 +9,8 @@ import {
   LABEL_TIPO_EVENTO_SANITARIO,
   GRAUS_FAMACHA,
   RECURSO_OVINOS,
+  StatusAnimal,
+  formatarQuantidade,
 } from '@pecus/shared';
 import {
   proximosVencimentos,
@@ -21,6 +23,9 @@ import {
 } from '@/lib/sanidade';
 import { listarAnimais, type AnimalComLote } from '@/lib/animais';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
+import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
+import { CampoInsumoAplicado } from '@/components/CampoInsumoAplicado';
+import { brlOuTraco } from '@/lib/formato';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { usePermissoes } from '@/contexts/PermissoesContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -39,6 +44,10 @@ const FORM_VAZIO = {
   escoreFamacha: '' as number | '',
   escoreCorporal: '' as number | '',
   observacao: '',
+  /** Insumo consumido. Vazio = manejo sem produto (exame, avaliação de escore). */
+  insumoId: '',
+  quantidadeInsumo: '' as number | '',
+  unidadeInsumo: '',
 };
 
 export default function SanidadePage() {
@@ -55,6 +64,7 @@ export default function SanidadePage() {
   const [famacha, setFamacha] = useState<AlertaFamacha | null>(null);
   const [animais, setAnimais] = useState<AnimalComLote[]>([]);
   const [lotes, setLotes] = useState<LoteComContagem[]>([]);
+  const [insumos, setInsumos] = useState<InsumoComSaldo[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
@@ -90,12 +100,33 @@ export default function SanidadePage() {
     carregar();
     listarAnimais().then(setAnimais).catch(() => {});
     listarLotes().then(setLotes).catch(() => {});
+    // Falha em silêncio de propósito: quem não tem o módulo Estoque recebe 403 e
+    // a tela simplesmente não oferece o campo de insumo — o manejo continua
+    // podendo ser registrado sem produto.
+    listarInsumos().then(setInsumos).catch(() => setInsumos([]));
   }, []);
 
   function abrirModal() {
     setForm({ ...FORM_VAZIO, animalId: animais[0]?.id ?? '', loteId: lotes[0]?.id ?? '' });
     setModalAberto(true);
   }
+
+  /**
+   * Preenche lote/animal quando as listas chegam depois do modal abrir.
+   *
+   * Sem isto o `<select>` mostrava o primeiro lote (o navegador exibe a primeira
+   * opção quando o `value` não casa com nenhuma) enquanto `form.loteId` continuava
+   * vazio — e salvar respondia "Informe um lote ou ao menos um animal", com o
+   * lote aparentemente escolhido na tela.
+   */
+  useEffect(() => {
+    setForm((atual) => {
+      const loteId = atual.loteId || lotes[0]?.id || '';
+      const animalId = atual.animalId || animais[0]?.id || '';
+      if (loteId === atual.loteId && animalId === atual.animalId) return atual;
+      return { ...atual, loteId, animalId };
+    });
+  }, [lotes, animais]);
 
   async function salvar() {
     setSalvando(true);
@@ -106,26 +137,50 @@ export default function SanidadePage() {
         data: form.data,
         proximaAplicacao: form.proximaAplicacao || undefined,
         observacao: form.observacao || undefined,
+        // Os três andam juntos: sem insumo escolhido não há baixa de estoque nem
+        // custo, e o servidor recusa insumo sem quantidade.
+        ...(form.insumoId && form.quantidadeInsumo !== ''
+          ? {
+              insumoId: form.insumoId,
+              quantidadeInsumo: Number(form.quantidadeInsumo),
+              unidadeInsumo: form.unidadeInsumo || undefined,
+            }
+          : {}),
       };
+      const rotulo = LABEL_TIPO_EVENTO_SANITARIO[form.tipo];
+      let complemento = '';
+      let aviso: string | null = null;
+
       if (form.alvo === 'animal') {
         // Os escores são individuais (FAMACHA se avalia olhando o olho de cada
         // animal), então só existem no cadastro por animal — nunca em massa.
-        await criarEventoSanitario({
+        const evento = await criarEventoSanitario({
           ...campos,
           animalId: form.animalId,
           escoreFamacha: form.escoreFamacha === '' ? undefined : Number(form.escoreFamacha),
           escoreCorporal: form.escoreCorporal === '' ? undefined : Number(form.escoreCorporal),
         });
+        if (evento.custo != null) complemento = ` Custo do insumo: ${brlOuTraco(evento.custo)}.`;
+        aviso = evento.aviso;
       } else {
-        await aplicarEmMassa({ ...campos, loteId: form.loteId });
+        const massa = await aplicarEmMassa({ ...campos, loteId: form.loteId });
+        if (massa.insumo?.custoTotal != null) {
+          complemento =
+            ` ${formatarQuantidade(massa.insumo.quantidadeTotal, massa.insumo.unidade)} de ${massa.insumo.nome}` +
+            ` (${brlOuTraco(massa.insumo.custoTotal)}, ${brlOuTraco(massa.insumo.custoPorAnimal)} por animal).`;
+        }
+        aviso = massa.aviso;
       }
+
       setModalAberto(false);
-      const rotulo = LABEL_TIPO_EVENTO_SANITARIO[form.tipo];
       toast.sucesso(
-        form.alvo === 'animal'
+        (form.alvo === 'animal'
           ? `${rotulo} "${form.nome}" registrada no animal.`
-          : `${rotulo} "${form.nome}" aplicada em todo o lote.`,
+          : `${rotulo} "${form.nome}" aplicada em todo o lote.`) + complemento,
       );
+      // Aviso é alerta, não erro: o lançamento foi gravado (estoque negativo ou
+      // insumo sem custo de compra).
+      if (aviso) toast.erro(aviso);
       carregar();
     } catch (e) {
       toast.erroDe(e, 'Erro ao salvar evento sanitário');
@@ -135,6 +190,12 @@ export default function SanidadePage() {
   }
 
   const brData = (d?: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
+
+  /** Cabeças que a aplicação em massa vai atingir — o estoque baixa dose × cabeças. */
+  const cabecasAlvo =
+    form.alvo === 'lote'
+      ? animais.filter((a) => a.loteId === form.loteId && a.status === StatusAnimal.ATIVO).length
+      : 1;
 
   return (
     <div className="container">
@@ -395,6 +456,25 @@ export default function SanidadePage() {
                 </div>
               )}
             </div>
+
+            {/* Insumo aplicado: é o que baixa o estoque e joga o custo no animal. */}
+            <CampoInsumoAplicado
+              insumos={insumos}
+              cabecas={cabecasAlvo}
+              valor={{
+                insumoId: form.insumoId,
+                quantidade: form.quantidadeInsumo,
+                unidade: form.unidadeInsumo,
+              }}
+              onChange={(v) =>
+                setForm({
+                  ...form,
+                  insumoId: v.insumoId,
+                  quantidadeInsumo: v.quantidade,
+                  unidadeInsumo: v.unidade,
+                })
+              }
+            />
 
             {temOvinos && form.alvo === 'animal' && (
               <div className="linha-campos">

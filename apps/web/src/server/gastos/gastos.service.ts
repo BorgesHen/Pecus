@@ -1,6 +1,8 @@
+import { NotFoundException } from '@nestjs/common';
 import { CategoriaGasto, TipoMovimentoInsumo } from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
+import { converterParaUnidadeDoInsumo } from '../insumos/custo-insumo.service';
 import { prisma } from '../prisma';
 import type { CriarGastoDto } from './dto';
 
@@ -33,12 +35,27 @@ export async function criar(empresaId: string, dtoOriginal: CriarGastoDto) {
 
     // Gasto com insumo + quantidade = compra que abastece o estoque (entrada automática).
     if (dto.insumoId && dto.quantidade) {
+      const insumo = await tx.insumo.findFirst({
+        where: { id: dto.insumoId, empresaId },
+        select: { unidade: true },
+      });
+      if (!insumo) throw new NotFoundException('Insumo não encontrado nesta fazenda.');
+
+      // A unidade do gasto é texto livre e pode não ser a do cadastro do insumo
+      // (comprou em "L" um insumo cadastrado em "ml"). Converte quando dá; se
+      // não der, recusa em vez de somar número com significado errado no saldo.
+      const quantidade = converterParaUnidadeDoInsumo(dto.quantidade, dto.unidade, insumo.unidade);
+
       await tx.movimentoInsumo.create({
         data: {
           empresaId,
           insumoId: dto.insumoId,
           tipo: TipoMovimentoInsumo.ENTRADA,
-          quantidade: dto.quantidade,
+          quantidade,
+          // O valor pago é copiado pro movimento porque é dele que sai o custo
+          // médio do insumo. Copiar é seguro aqui: gasto não tem edição, só
+          // criação e exclusão, então os dois não têm como divergir.
+          valorTotal: dto.valor,
           data: gasto.data,
           gastoId: gasto.id,
         },

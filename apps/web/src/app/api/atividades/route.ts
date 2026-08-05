@@ -9,7 +9,7 @@ import {
   type EntidadeAtividade,
 } from '@pecus/shared';
 import { rota } from '@/server/rota';
-import { autorizar } from '@/server/autorizar';
+import { autorizar, temPermissao } from '@/server/autorizar';
 import * as atividadesService from '@/server/atividades/atividades.service';
 
 /**
@@ -23,6 +23,10 @@ import * as atividadesService from '@/server/atividades/atividades.service';
  * - **Histórico de um módulo** (`entidade`, opcionalmente com `registroId`):
  *   quem já pode VER aquela tela pode ver o histórico dela. É o que sustenta o
  *   botão "Histórico" espalhado pelo sistema.
+ * - **Histórico de vários módulos** (`entidade=animal,pesagem`): a tela do
+ *   animal junta o que foi alterado nele com as pesagens dele. A primeira
+ *   entidade é a da tela e manda na autorização; as demais entram só se a
+ *   pessoa também puder ver aquele módulo (ver abaixo).
  *
  * Não checa `moduloAtivo` de propósito: desligar um módulo esconde a tela, mas
  * não deve apagar da vista o que já foi feito enquanto ele estava em uso.
@@ -30,13 +34,17 @@ import * as atividadesService from '@/server/atividades/atividades.service';
 export const GET = rota(async (req) => {
   const params = req.nextUrl.searchParams;
 
-  let entidade: EntidadeAtividade | undefined;
+  const entidades: EntidadeAtividade[] = [];
   const entidadeParam = params.get('entidade');
   if (entidadeParam) {
-    if (!ehEntidadeAtividade(entidadeParam)) {
-      throw new BadRequestException('Módulo inválido para o histórico.');
+    for (const valor of entidadeParam.split(',')) {
+      const bruto = valor.trim();
+      if (!bruto) continue;
+      if (!ehEntidadeAtividade(bruto)) {
+        throw new BadRequestException('Módulo inválido para o histórico.');
+      }
+      if (!entidades.includes(bruto)) entidades.push(bruto);
     }
-    entidade = entidadeParam;
   }
 
   let acao: AcaoAtividade | undefined;
@@ -48,13 +56,29 @@ export const GET = rota(async (req) => {
     acao = acaoParam;
   }
 
-  const modulo = entidade ? MODULO_DA_ENTIDADE[entidade] : null;
-  const { empresaId } = modulo
+  // A primeira entidade é a da tela: é ela que decide se a pessoa entra.
+  const principal = entidades[0];
+  const modulo = principal ? MODULO_DA_ENTIDADE[principal] : null;
+  const { user, empresaId } = modulo
     ? await autorizar(req, { permissao: { modulo, nivel: NivelAcesso.VER } })
     : await autorizar(req, { papeis: [PapelUsuario.RESPONSAVEL] });
 
+  // As entidades extras são descartadas quando a pessoa não tem o módulo, em
+  // vez de negar a requisição inteira: quem tem Animais mas não Pesagens
+  // continua vendo o histórico do animal, só sem as linhas de pesagem — a
+  // mesma regra que esconde peso e GMD da listagem de animais. Negar tudo
+  // tiraria dessa pessoa um histórico que ela pode ver.
+  const permitidas: EntidadeAtividade[] = [];
+  for (const extra of entidades.slice(1)) {
+    const moduloExtra = MODULO_DA_ENTIDADE[extra];
+    // Entidade sem módulo (usuários, configurações) é restrita ao responsável e
+    // não faz sentido como complemento de uma tela de detalhe.
+    if (!moduloExtra) throw new BadRequestException('Módulo inválido para o histórico combinado.');
+    if (await temPermissao(user, moduloExtra, NivelAcesso.VER)) permitidas.push(extra);
+  }
+
   return atividadesService.listar(empresaId, {
-    entidade,
+    entidade: principal ? [principal, ...permitidas] : undefined,
     acao,
     registroId: params.get('registroId') ?? undefined,
     autorId: params.get('autorId') ?? undefined,
