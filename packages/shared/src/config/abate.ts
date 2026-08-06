@@ -48,9 +48,13 @@ export interface ResultadoAbateAnimal {
   /** Peso vivo que entrou na divisão. */
   pesoVivo: number | null;
   /**
-   * De onde veio o peso vivo. Importa porque a diferença entre os dois é a quebra
-   * de transporte (2 a 4%): o mesmo animal rende alguns pontos menos quando
-   * medido contra o peso da fazenda.
+   * De onde veio o peso vivo. Importa porque o peso da fazenda foi medido ANTES do
+   * transporte e é maior — o mesmo animal rende alguns pontos menos quando medido
+   * contra ele. A diferença entre os dois pesos é a quebra de transporte (2 a 4%).
+   *
+   * O cálculo **não estima nem desconta** essa quebra: é carcaça ÷ peso informado,
+   * e este campo diz qual peso foi. Aplicar uma quebra estimada faria um número
+   * medido virar chute, sem o produtor saber qual dos dois está lendo.
    */
   origemPesoVivo: 'frigorifico' | 'saida' | null;
   /** Arrobas de carcaça entregues. Nulo em espécie que não se vende por arroba (ovino). */

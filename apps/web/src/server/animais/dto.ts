@@ -119,9 +119,14 @@ export class RegistrarAbateDto {
   dataAbate: string;
 
   /**
-   * Peso vivo na balança do frigorífico. Opcional porque nem toda nota traz —
-   * sem ele o rendimento usa o peso de saída da fazenda, que inclui a quebra de
-   * transporte e por isso dá alguns pontos menos.
+   * Peso vivo na balança do frigorífico. Opcional porque nem toda nota traz — sem
+   * ele o rendimento é calculado sobre o peso de saída da fazenda, que foi medido
+   * ANTES do transporte e por isso é maior, dando um rendimento alguns pontos
+   * menor.
+   *
+   * Não existe desconto de quebra em lugar nenhum: a conta é sempre carcaça ÷ peso
+   * informado. Estimar a quebra transformaria um número medido em número chutado, e
+   * o produtor não teria como saber qual dos dois está vendo.
    */
   @IsOptional()
   @IsNumber()

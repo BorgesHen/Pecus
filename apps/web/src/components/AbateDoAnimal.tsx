@@ -315,9 +315,22 @@ export function AbateDoAnimal({
                 }
               />
               <small style={{ color: 'var(--texto-suave)' }}>
-                {pesoSaida != null
-                  ? `Sem este campo, o rendimento usa o peso de saída da fazenda (${pesoSaida} kg) — que inclui a quebra de transporte e dá alguns pontos menos.`
-                  : 'Este animal não tem peso de saída registrado, então sem este campo o rendimento não pode ser calculado.'}
+                {/* Dizer que o sistema NÃO desconta nada é o ponto: a frase antiga
+                    ("inclui a quebra de transporte") dava a entender que havia um
+                    ajuste automático, e não há — é carcaça ÷ peso, sem estimativa. */}
+                {pesoSaida != null ? (
+                  <>
+                    Sem este campo, o rendimento é calculado sobre o peso de saída da fazenda (
+                    {pesoSaida} kg), que foi medido <strong>antes</strong> do transporte e por isso é maior
+                    que o da balança do frigorífico. O resultado sai alguns pontos menor que o da nota.
+                    <br />
+                    O sistema <strong>não aplica desconto de quebra</strong>: a conta é sempre carcaça ÷
+                    peso informado, sem estimativa. Para o rendimento bater com a nota, informe aqui o peso
+                    vivo que o frigorífico pesou.
+                  </>
+                ) : (
+                  'Este animal não tem peso de saída registrado, então sem este campo o rendimento não pode ser calculado.'
+                )}
               </small>
             </div>
 
