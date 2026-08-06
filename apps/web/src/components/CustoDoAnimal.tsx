@@ -113,6 +113,26 @@ export function CustoDoAnimal({ custo }: { custo: CustoAnimal }) {
         </>
       )}
 
+      {/* Receita e lucro fecham o ciclo: até agora o sistema sabia quanto o
+          animal custou e não sabia por quanto foi vendido. */}
+      {custo.receita != null && (
+        <div className="grid-cards" style={{ marginTop: 20 }}>
+          <div className="card">
+            <div className="metrica">{brl(custo.receita)}</div>
+            <div className="metrica-label">Recebido na venda</div>
+          </div>
+          <div className="card">
+            <div className="metrica" style={(custo.lucro ?? 0) < 0 ? { color: 'var(--erro)' } : undefined}>
+              {brlValor(custo.lucro ?? 0)}
+            </div>
+            <div className="metrica-label">
+              Lucro (receita − custo)
+              {custo.margem != null && ` · margem ${custo.margem}%`}
+            </div>
+          </div>
+        </div>
+      )}
+
       {custo.ressalvas.length > 0 && (
         <ul style={{ marginTop: 16, paddingLeft: 20, color: 'var(--texto-suave)', fontSize: 13 }}>
           {custo.ressalvas.map((ressalva) => (

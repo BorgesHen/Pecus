@@ -17,11 +17,13 @@ import {
 } from '@pecus/shared';
 import {
   obterLote,
+  obterAbateDoLote,
   obterCoberturaLote,
   obterCustosDoLote,
   atualizarLote,
   trocarMetodoLote,
   listarMetodosManejo,
+  type AbateDoLote,
   type CoberturaLote,
   type CustosDoLote,
   type LoteDetalhado,
@@ -53,6 +55,7 @@ export default function DetalheLotePage() {
   const [indicadores, setIndicadores] = useState<IndicadoresMetodo | null>(null);
   const [totalAnimaisCadastrados, setTotalAnimaisCadastrados] = useState<number | null>(null);
   const [cobertura, setCobertura] = useState<CoberturaLote | null>(null);
+  const [abate, setAbate] = useState<AbateDoLote | null>(null);
   const [custos, setCustos] = useState<CustosDoLote | null>(null);
   const [metodos, setMetodos] = useState<MetodoManejo[]>([]);
   const [areas, setAreas] = useState<AreaComContagem[]>([]);
@@ -86,6 +89,7 @@ export default function DetalheLotePage() {
       .then((lista) => setTotalAnimaisCadastrados(lista.length))
       .catch(() => setTotalAnimaisCadastrados(null));
     obterCoberturaLote(loteId).then(setCobertura).catch(() => setCobertura(null));
+    obterAbateDoLote(loteId).then(setAbate).catch(() => setAbate(null));
     // Custo individual é informação financeira: sem o módulo Gastos a rota
     // responde 403 e a seção simplesmente não aparece.
     if (podeVerGastos) {
@@ -400,6 +404,84 @@ export default function DetalheLotePage() {
       )}
 
       {cobertura && <AcompanhamentoLote cobertura={cobertura} />}
+
+      {abate && abate.abatidos > 0 && (
+        <>
+          <h3 style={{ marginBottom: 4 }}>Rendimento de carcaça</h3>
+          <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>
+            {/* A comparação estimado × realizado é o ponto: é ela que ensina a
+                estimar melhor no lote seguinte. */}
+            O rendimento realizado é a carcaça total dividida pelo peso vivo total dos animais abatidos —
+            ponderado, e não a média dos percentuais de cada um.
+          </p>
+
+          <div className="grid-cards" style={{ marginBottom: 16 }}>
+            <div className="card">
+              <div className="metrica">
+                {abate.rendimentoRealizado != null ? `${abate.rendimentoRealizado}%` : '—'}
+              </div>
+              <div className="metrica-label">
+                Realizado{abate.completo ? ' (lote fechado)' : ' (parcial)'}
+              </div>
+            </div>
+            <div className="card">
+              <div className="metrica">{abate.rendimentoEstimado}%</div>
+              <div className="metrica-label">Estimado no cadastro do lote</div>
+            </div>
+            {abate.arrobasTotais != null && (
+              <div className="card">
+                <div className="metrica">{abate.arrobasTotais} @</div>
+                <div className="metrica-label">Arrobas entregues ({abate.pesoCarcacaTotal} kg de carcaça)</div>
+              </div>
+            )}
+            <div className="card">
+              <div
+                className="metrica"
+                style={abate.pendentes.length > 0 ? { color: 'var(--erro)' } : undefined}
+              >
+                {abate.comCarcaca} / {abate.abatidos}
+              </div>
+              <div className="metrica-label">Abatidos com carcaça informada</div>
+            </div>
+          </div>
+
+          {abate.rendimentoRealizado != null && (
+            <p style={{ color: 'var(--texto-suave)', fontSize: 14, marginBottom: 16 }}>
+              {(() => {
+                const diferenca = Math.round((abate.rendimentoRealizado - abate.rendimentoEstimado) * 100) / 100;
+                if (diferenca === 0) return 'O realizado bateu exatamente com a estimativa.';
+                return diferenca > 0
+                  ? `Rendeu ${diferenca} ponto(s) percentual(is) ACIMA da estimativa — a projeção do lote era conservadora.`
+                  : `Rendeu ${-diferenca} ponto(s) percentual(is) ABAIXO da estimativa — vale usar o realizado como referência no próximo lote.`;
+              })()}
+            </p>
+          )}
+
+          {abate.pendentes.length > 0 && (
+            <div className="card" style={{ marginBottom: 24 }}>
+              <h4 style={{ marginTop: 0, marginBottom: 4 }}>Falta informar a carcaça</h4>
+              <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginBottom: 8 }}>
+                Enquanto estes animais não tiverem o peso de carcaça, o rendimento acima é parcial e o lote
+                não fecha.
+              </p>
+              <p style={{ fontSize: 13, margin: 0, lineHeight: 1.9 }}>
+                {abate.pendentes.map((a) => (
+                  <Link key={a.id} href={`/animais/${a.id}`} className="selo" style={{ marginRight: 6 }}>
+                    {a.identificador}
+                  </Link>
+                ))}
+              </p>
+            </div>
+          )}
+
+          {abate.completo && (
+            <p style={{ color: 'var(--texto-suave)', fontSize: 14, marginBottom: 24 }}>
+              Todos os animais saíram e todos têm carcaça informada: os números deste lote são finais, e o
+              custo por arroba passa a usar o rendimento realizado.
+            </p>
+          )}
+        </>
+      )}
 
       {custos && custos.animais.length > 0 && (
         <>

@@ -77,10 +77,34 @@ export default function RelatoriosPage() {
           </h3>
           {custo && custoPrincipal != null && (
             <p style={{ color: 'var(--texto-suave)', marginBottom: 12, fontSize: 14 }}>
+              {/* Dizer se o rendimento é estimado ou realizado é essencial: um
+                  custo por arroba calculado sobre estimativa não se compara a um
+                  calculado sobre a carcaça que realmente saiu. */}
               Considera rendimento de carcaça de {custo.rendimentoCarcaca}%
+              {custo.origemRendimento === 'realizado' ? (
+                <>
+                  {' '}
+                  <strong>realizado</strong> ({custo.abatidosComCarcaca} de {custo.abatidos} abatidos com
+                  carcaça informada)
+                </>
+              ) : (
+                <>
+                  {' '}
+                  <strong>estimado</strong>
+                  {custo.abatidos > 0 &&
+                    ' — informe o peso de carcaça dos animais abatidos para este número passar a usar o rendimento real'}
+                </>
+              )}
               {custo.vendePorArroba
-                ? ' (arroba = 15 kg de carcaça, não peso vivo).'
-                : ' — ovinos são comercializados por kg de carcaça, não por arroba.'}
+                ? '. Arroba = 15 kg de carcaça, não peso vivo.'
+                : '. Ovinos são comercializados por kg de carcaça, não por arroba.'}
+              {custo.arrobasEntregues != null && (
+                <>
+                  <br />
+                  Arrobas entregues no abate: <strong>{custo.arrobasEntregues} @</strong> — diferente das
+                  arrobas <em>produzidas</em> abaixo, que contam só o ganho de peso do período.
+                </>
+              )}
             </p>
           )}
 

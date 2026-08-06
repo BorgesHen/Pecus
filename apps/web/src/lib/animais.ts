@@ -79,6 +79,61 @@ export function removerPesagemAnimal(animalId: string, pesagemId: string) {
   return api<{ ok: boolean }>(`/animais/${animalId}/pesagens/${pesagemId}`, { method: 'DELETE' });
 }
 
+// ----- Abate: o rendimento de carcaça, informado depois da saída -----
+
+export interface AbateDoAnimal {
+  pesoCarcaca: number | null;
+  /** % de carcaça sobre o peso vivo. Nulo quando falta carcaça ou peso vivo. */
+  rendimento: number | null;
+  pesoVivo: number | null;
+  /** Frigorífico é o peso da nota; saída é o da fazenda (inclui quebra de transporte). */
+  origemPesoVivo: 'frigorifico' | 'saida' | null;
+  arrobas: number | null;
+  dataAbate: string | null;
+  observacaoAbate: string | null;
+  /** Valor total recebido pela venda. Nulo = ainda não informado. */
+  valorRecebido: number | null;
+  /** R$/@ implícito (total ÷ arrobas) — derivado, nunca gravado. */
+  valorPorArroba: number | null;
+  /** O animal saiu do rebanho, então há abate a informar. */
+  podeInformar: boolean;
+  /** Saiu e ainda não tem carcaça — é o trabalho pendente que a ficha destaca. */
+  pendente: boolean;
+  aviso?: string;
+}
+
+export interface NovoAbate {
+  /** kg de carcaça quente, da nota. O rendimento é derivado, não digitado. */
+  pesoCarcaca: number;
+  dataAbate: string;
+  /** Peso vivo no frigorífico; sem ele o rendimento usa o peso de saída. */
+  pesoVivoAbate?: number;
+  observacaoAbate?: string;
+  /**
+   * Valor TOTAL recebido (R$). Informar cria um lançamento de RECEITA em aberto,
+   * que aparece em contas a receber — não liquidado, porque o frigorífico paga
+   * depois e marcar como recebido antes mostraria um saldo que não existe.
+   */
+  valorRecebido?: number;
+  /** Comprador — vira o contato do lançamento de receita. */
+  contatoId?: string;
+}
+
+export function obterAbateDoAnimal(animalId: string) {
+  return api<AbateDoAnimal>(`/animais/${animalId}/abate`);
+}
+
+export function registrarAbate(animalId: string, dados: NovoAbate) {
+  return api<AbateDoAnimal & { animalIdentificador: string }>(`/animais/${animalId}/abate`, {
+    method: 'PATCH',
+    body: dados,
+  });
+}
+
+export function removerAbate(animalId: string) {
+  return api<{ ok: true; tinhaAbate: boolean }>(`/animais/${animalId}/abate`, { method: 'DELETE' });
+}
+
 // ----- Custo de produção do animal -----
 
 /**

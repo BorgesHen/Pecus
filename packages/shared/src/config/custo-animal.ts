@@ -141,6 +141,12 @@ export interface CustoAnimal {
   diretosSemValor: number;
   /** compra + rateio.porCabeca + totalDireto. */
   total: number;
+  /** Valor recebido pela venda. Nulo enquanto o animal não foi vendido/informado. */
+  receita: number | null;
+  /** receita − total. Nulo sem receita: lucro sem venda não existe, e zero mentiria. */
+  lucro: number | null;
+  /** lucro ÷ receita (%). Nulo sem receita. */
+  margem: number | null;
   /**
    * O que falta pro total ser completo, em português, pra a tela avisar em vez
    * de mostrar um número que parece fechado e não está.
@@ -154,6 +160,8 @@ export function montarCustoAnimal(entrada: {
   diretos?: CustoDiretoAnimal[];
   /** Animal sem lote não tem compra nem rateio — muda a ressalva. */
   temLote?: boolean;
+  /** Valor recebido na venda, do abate. */
+  receita?: number | null;
 }): CustoAnimal {
   const diretos = entrada.diretos ?? [];
   const comValor = diretos.filter((d) => d.valor != null);
@@ -193,13 +201,28 @@ export function montarCustoAnimal(entrada: {
     );
   }
 
+  const total = arredondar((compra ?? 0) + (rateio?.porCabeca ?? 0) + totalDireto);
+  const receita = entrada.receita ?? null;
+
+  // Lucro só existe com receita. Zero diria "não lucrou nada", quando o que se
+  // sabe é "ainda não vendeu" — e um lucro negativo do tamanho do custo apareceria
+  // em todo animal do rebanho ativo.
+  const lucro = receita != null ? arredondar(receita - total) : null;
+
+  if (receita == null && compra != null) {
+    ressalvas.push('O animal ainda não tem valor de venda informado, então não há lucro a calcular.');
+  }
+
   return {
     compra,
     rateio,
     totalDireto,
     diretos,
     diretosSemValor: semValor,
-    total: arredondar((compra ?? 0) + (rateio?.porCabeca ?? 0) + totalDireto),
+    total,
+    receita,
+    lucro,
+    margem: receita != null && receita > 0 && lucro != null ? arredondar((lucro / receita) * 100) : null,
     ressalvas,
   };
 }

@@ -47,8 +47,9 @@ export function listar(empresaId: string) {
   return prisma.lote.findMany({
     where: { empresaId },
     // `animais` na contagem porque o aviso de exclusão precisa dizer quantos
-    // animais ficariam sem lote — antes ele nem mencionava que isso acontece.
-    include: { metodoManejo: true, _count: { select: { pesagens: true, gastos: true, animais: true } } },
+    // animais ficariam sem lote. `lancamentos` no lugar de `gastos`: depois da
+    // unificação a despesa do lote é lançamento.
+    include: { metodoManejo: true, _count: { select: { pesagens: true, lancamentos: true, animais: true } } },
     orderBy: { dataAquisicao: 'desc' },
   });
 }
@@ -60,7 +61,6 @@ export async function detalhar(empresaId: string, id: string) {
       metodoManejo: true,
       area: true,
       pesagens: { orderBy: { data: 'asc' } },
-      gastos: { orderBy: { data: 'desc' } },
       metodoHistorico: { include: { metodoManejo: true }, orderBy: { dataInicio: 'desc' } },
     },
   });

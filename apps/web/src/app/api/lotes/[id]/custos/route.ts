@@ -29,7 +29,7 @@ export const GET = rota(async (req, { params }) => {
 
   const animais = await prisma.animal.findMany({
     where: { empresaId, loteId: params.id, status: StatusAnimal.ATIVO },
-    select: { id: true, identificador: true, loteId: true },
+    select: { id: true, identificador: true, loteId: true, valorRecebido: true },
     orderBy: { identificador: 'asc' },
   });
 
@@ -45,6 +45,8 @@ export const GET = rota(async (req, { params }) => {
         rateio: custo.rateio?.porCabeca ?? 0,
         direto: custo.totalDireto,
         total: custo.total,
+        receita: custo.receita,
+        lucro: custo.lucro,
         lancamentosSemValor: custo.diretosSemValor,
       };
     })

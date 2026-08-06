@@ -201,3 +201,105 @@ export function liquidarLancamento(id: string, dados: LiquidarLancamento) {
 export function removerLancamento(id: string) {
   return api<{ ok: true }>(`/financeiro/lancamentos/${id}`, { method: 'DELETE' });
 }
+
+// ----- Saldo bancário, fluxo de caixa e resultado (DRE) -----
+
+export interface SaldoBanco {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  saldoInicial: number;
+  dataSaldoInicial: string | null;
+  recebido: number;
+  pago: number;
+  movimentado: number;
+  /** saldoInicial + movimentado (só o que foi liquidado). */
+  saldoAtual: number;
+}
+
+export interface Saldos {
+  contas: SaldoBanco[];
+  saldoTotal: number;
+  /** Liquidado sem banco informado — não entra em saldo de conta nenhuma. */
+  liquidadoSemBanco: number;
+}
+
+export function obterSaldos() {
+  return api<Saldos>('/financeiro/saldos');
+}
+
+export interface MesDoFluxo {
+  mes: string;
+  entradas: number;
+  saidas: number;
+  resultado: number;
+  acumulado: number;
+}
+
+export interface FluxoDeCaixa {
+  saldoInicialBancos: number;
+  meses: MesDoFluxo[];
+  totalEntradas: number;
+  totalSaidas: number;
+  saldoFinal: number;
+}
+
+export function obterFluxoDeCaixa(meses?: number) {
+  return api<FluxoDeCaixa>(`/financeiro/fluxo-caixa${meses ? `?meses=${meses}` : ''}`);
+}
+
+export interface LinhaResultado {
+  grupoId: string;
+  codigo: string;
+  nome: string;
+  natureza: NaturezaFinanceira;
+  total: number;
+  percentualDaReceita: number | null;
+  contas: { contaId: string; codigo: string; nome: string; total: number }[];
+}
+
+export interface Resultado {
+  grupos: LinhaResultado[];
+  receitaTotal: number;
+  despesaTotal: number;
+  /** Receita − despesa do período (competência). */
+  resultado: number;
+  /** Margem em % sobre a receita. Nulo sem receita. */
+  margem: number | null;
+}
+
+export function obterResultado(filtros: { de?: string; ate?: string; loteId?: string } = {}) {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(filtros)) if (v) p.set(k, v);
+  const q = p.toString();
+  return api<Resultado>(`/financeiro/resultado${q ? `?${q}` : ''}`);
+}
+
+/** Edição de lançamento — não mexe no parcelamento (ver o service). */
+export interface AtualizarLancamento {
+  contaId?: string;
+  loteId?: string;
+  contatoId?: string;
+  contaBancariaId?: string;
+  formaPagamento?: FormaPagamento;
+  descricao?: string;
+  documento?: string;
+  valorParcela?: number;
+  dataDocumento?: string;
+  dataVencimento?: string;
+}
+
+export function atualizarLancamento(id: string, dados: AtualizarLancamento) {
+  return api<LancamentoDetalhado & { aviso: string | null }>(`/financeiro/lancamentos/${id}`, {
+    method: 'PATCH',
+    body: dados,
+  });
+}
+
+/** Desfaz a liquidação: volta pra "em aberto" e o valor sai do saldo do banco. */
+export function estornarLiquidacao(id: string) {
+  return api<{ liquidacaoEstornada: string; valorParcela: number }>(
+    `/financeiro/lancamentos/${id}/estornar`,
+    { method: 'PATCH' },
+  );
+}

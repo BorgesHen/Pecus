@@ -23,8 +23,17 @@ import {
   type GrupoComContas,
   type LancamentoDetalhado,
   type NovoLancamento,
+  obterSaldos,
+  obterFluxoDeCaixa,
+  obterResultado,
+  estornarLiquidacao,
+  type Saldos,
+  type FluxoDeCaixa,
+  type Resultado,
+  atualizarLancamento,
 } from '@/lib/financeiro';
 import { brData, hojeISO } from '@/lib/data';
+import { PainelFinanceiro } from '@/components/PainelFinanceiro';
 import { listarLotes, type LoteComContagem } from '@/lib/lotes';
 import type { ContaBancaria, Contato } from '@pecus/shared';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
@@ -52,6 +61,10 @@ export default function FinanceiroPage() {
   const podeEditarFinanceiro = podeEditar(ModuloSistema.FINANCEIRO);
 
   const [lancamentos, setLancamentos] = useState<LancamentoDetalhado[] | null>(null);
+  const [editando, setEditando] = useState<LancamentoDetalhado | null>(null);
+  const [saldos, setSaldos] = useState<Saldos | null>(null);
+  const [fluxo, setFluxo] = useState<FluxoDeCaixa | null>(null);
+  const [resultado, setResultado] = useState<Resultado | null>(null);
   const [grupos, setGrupos] = useState<GrupoComContas[]>([]);
   const [bancos, setBancos] = useState<ContaBancaria[]>([]);
   const [contatos, setContatos] = useState<Contato[]>([]);
@@ -82,6 +95,12 @@ export default function FinanceiroPage() {
     })
       .then(setLancamentos)
       .catch((e) => setErro(e instanceof Error ? e.message : 'Erro ao carregar lançamentos'));
+
+    // Saldo, fluxo e resultado são do período inteiro, não do filtro da lista —
+    // filtrar "só em aberto" não deveria mudar o saldo do banco.
+    obterSaldos().then(setSaldos).catch(() => setSaldos(null));
+    obterFluxoDeCaixa(12).then(setFluxo).catch(() => setFluxo(null));
+    obterResultado().then(setResultado).catch(() => setResultado(null));
   }
 
   useEffect(() => {
@@ -97,6 +116,8 @@ export default function FinanceiroPage() {
   }, []);
 
   function abrirModal() {
+    // Garante modo de criação: o mesmo modal serve pra editar.
+    setEditando(null);
     setNatureza(NaturezaFinanceira.DESPESA);
     setForm(FORM_VAZIO);
     setValorTexto('');
@@ -115,15 +136,79 @@ export default function FinanceiroPage() {
   async function salvar() {
     setSalvando(true);
     try {
-      await criarLancamento(form);
-      setModalAberto(false);
-      toast.sucesso(`Lançamento de ${brl(form.valorTotal)} registrado.`);
+      if (editando) {
+        const r = await atualizarLancamento(editando.id, {
+          contaId: form.contaId,
+          loteId: form.loteId || undefined,
+          contatoId: form.contatoId || undefined,
+          contaBancariaId: form.contaBancariaId || undefined,
+          formaPagamento: form.formaPagamento,
+          descricao: form.descricao || undefined,
+          documento: form.documento || undefined,
+          valorParcela: form.valorTotal,
+          dataDocumento: form.dataDocumento,
+          dataVencimento: form.dataVencimento,
+        });
+        setModalAberto(false);
+        setEditando(null);
+        toast.sucesso(`Lançamento de ${brl(form.valorTotal)} atualizado.`);
+        // Aviso quando se muda o valor de uma parcela de série: a soma das
+        // parcelas deixa de fechar com o total, e é melhor dizer do que deixar a
+        // divergência aparecer num relatório depois.
+        if (r.aviso) toast.erro(r.aviso);
+      } else {
+        await criarLancamento(form);
+        setModalAberto(false);
+        toast.sucesso(`Lançamento de ${brl(form.valorTotal)} registrado.`);
+      }
       carregar();
     } catch (e) {
-      toast.erroDe(e, 'Erro ao salvar lançamento');
+      toast.erroDe(e, editando ? 'Erro ao atualizar lançamento' : 'Erro ao salvar lançamento');
     } finally {
       setSalvando(false);
     }
+  }
+
+  function fecharModal() {
+    setModalAberto(false);
+    // Sem limpar, o próximo "+ Novo lançamento" abriria em modo de edição.
+    setEditando(null);
+  }
+
+  async function estornar(l: LancamentoDetalhado) {
+    try {
+      const r = await estornarLiquidacao(l.id);
+      toast.sucesso(
+        `Liquidação estornada: ${brl(r.valorParcela)} voltou para "em aberto" e saiu do saldo do banco.`,
+      );
+      carregar();
+    } catch (e) {
+      toast.erroDe(e, 'Erro ao estornar a liquidação');
+    }
+  }
+
+  /**
+   * Edição: reaproveita o mesmo formulário do lançamento novo, sem os campos de
+   * parcelamento — mudar `totalParcelas` numa parcela isolada quebraria a série
+   * (a soma das parcelas deixaria de fechar com o total).
+   */
+  function abrirEdicao(l: LancamentoDetalhado) {
+    setEditando(l);
+    setForm({
+      ...FORM_VAZIO,
+      contaId: l.contaId,
+      loteId: l.loteId ?? '',
+      contatoId: l.contatoId ?? '',
+      contaBancariaId: l.contaBancariaId ?? '',
+      formaPagamento: l.formaPagamento ?? undefined,
+      descricao: l.descricao ?? '',
+      documento: l.documento ?? '',
+      valorTotal: Number(l.valorParcela),
+      dataDocumento: l.dataDocumento.slice(0, 10),
+      dataVencimento: l.dataVencimento.slice(0, 10),
+      totalParcelas: 1,
+    });
+    setModalAberto(true);
   }
 
   function abrirLiquidar(l: LancamentoDetalhado) {
@@ -219,6 +304,10 @@ export default function FinanceiroPage() {
 
       {!lancamentos && !erro && <p>Carregando...</p>}
 
+      <PainelFinanceiro saldos={saldos} fluxo={fluxo} resultado={resultado} />
+
+      <h3 style={{ marginBottom: 12 }}>Lançamentos</h3>
+
       {lancamentos && lancamentos.length === 0 && (
         <div className="card">
           <p style={{ color: 'var(--texto-suave)' }}>Nenhum lançamento encontrado.</p>
@@ -257,7 +346,17 @@ export default function FinanceiroPage() {
                   </td>
                   <td data-label="">
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      {l.status !== StatusLancamento.LIQUIDADO && (
+                      {l.status === StatusLancamento.LIQUIDADO ? (
+                        // Estorno: liquidar errado só tinha saída excluindo a
+                        // parcela e relançando a série inteira.
+                        <button
+                          className="btn-secundario"
+                          onClick={() => estornar(l)}
+                          disabled={!podeEditarFinanceiro}
+                        >
+                          Estornar
+                        </button>
+                      ) : (
                         <button
                           className="btn-secundario"
                           onClick={() => abrirLiquidar(l)}
@@ -266,6 +365,13 @@ export default function FinanceiroPage() {
                           Liquidar
                         </button>
                       )}
+                      <button
+                        className="btn-secundario"
+                        onClick={() => abrirEdicao(l)}
+                        disabled={!podeEditarFinanceiro}
+                      >
+                        Editar
+                      </button>
                       <button
                         className="btn-perigo"
                         onClick={() => setParaExcluir(l)}
@@ -283,9 +389,16 @@ export default function FinanceiroPage() {
       )}
 
       {modalAberto && (
-        <div className="modal-overlay" onClick={() => setModalAberto(false)}>
+        <div className="modal-overlay" onClick={fecharModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Novo lançamento</h3>
+            <h3>{editando ? 'Editar lançamento' : 'Novo lançamento'}</h3>
+            {editando && editando.totalParcelas > 1 && (
+              <p style={{ color: 'var(--texto-suave)', fontSize: 13, marginBottom: 12 }}>
+                Parcela {editando.numeroParcela} de {editando.totalParcelas}. A edição vale só para esta
+                parcela — o parcelamento não muda, porque alterar a série numa parcela isolada faria a soma
+                das parcelas parar de fechar com o total.
+              </p>
+            )}
 
             <div className="campo">
               <label>Natureza</label>
@@ -462,7 +575,7 @@ export default function FinanceiroPage() {
             )}
 
             <div className="modal-acoes">
-              <button className="btn-secundario" onClick={() => setModalAberto(false)}>
+              <button className="btn-secundario" onClick={fecharModal}>
                 Cancelar
               </button>
               <button className="btn" onClick={salvar} disabled={salvando || !form.contaId || !form.valorTotal}>

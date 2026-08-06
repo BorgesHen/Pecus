@@ -25,8 +25,10 @@ export const POST = rota(async (req) => {
   await auditar(user, empresaId).criacao(
     EntidadeAtividade.GASTO,
     gasto.id,
-    `Gasto de ${brl(Number(gasto.valor))} em "${gasto.categoria}" lançado`,
-    { loteId: gasto.loteId, insumoId: gasto.insumoId },
+    // `conta` no lugar de `categoria`: depois da unificação a categoria da tela é
+    // uma conta do plano, e é o nome dela que faz sentido no histórico.
+    `Despesa de ${brl(Number(gasto.valorParcela))} lançada`,
+    { loteId: gasto.loteId, insumoId: gasto.insumoId, contaId: gasto.contaId },
   );
   return gasto;
 });

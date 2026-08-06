@@ -36,7 +36,7 @@ type TipoMovimento = 'ENTRADA' | 'SAIDA';
 const MOVIMENTO = {
   ENTRADA: {
     titulo: 'Registrar entrada',
-    ajuda: 'Use para saldo inicial, ajuste de inventário, produção própria ou devolução. Compra com nota entra sozinha pelo Gasto.',
+    ajuda: 'Use para saldo inicial, ajuste de inventário, produção própria ou devolução. Compra com nota entra sozinha pela tela de Gastos.',
     exemploObs: 'ex: saldo inicial, ajuste de inventário',
     salvar: registrarEntrada,
   },
@@ -213,7 +213,7 @@ export default function InsumosPage() {
       </div>
 
       <p style={{ color: 'var(--texto-suave)', marginBottom: 16, fontSize: 14 }}>
-        Quando você lança um Gasto vinculado a um insumo (com quantidade), a entrada acontece
+        Quando você lança uma despesa vinculada a um insumo (com quantidade), a entrada acontece
         automaticamente. Use <strong>Registrar entrada</strong> para o que entra sem passar por um
         gasto — saldo inicial, ajuste de inventário, produção própria — e{' '}
         <strong>Registrar consumo</strong> para dar baixa.
@@ -263,7 +263,7 @@ export default function InsumosPage() {
                       {i.custoUnitario != null ? (
                         brlUnitario(i.custoUnitario, i.unidade)
                       ) : (
-                        <span title="Nenhuma entrada com valor informado — lance a compra como Gasto, ou informe o valor na entrada manual.">
+                        <span title="Nenhuma entrada com valor informado — lance a compra em Gastos, ou informe o valor na entrada manual.">
                           —
                         </span>
                       )}

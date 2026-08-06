@@ -21,6 +21,8 @@ export const PLANO_CONTAS_PADRAO: {
       { codigo: '1.1.1', nome: 'Vacas' },
       { codigo: '1.1.2', nome: 'Novilhas' },
       { codigo: '1.1.3', nome: 'Bois' },
+      // Recebe a venda de categoria sem conta própria (bezerro, touro, ovino).
+      { codigo: '1.1.4', nome: 'Outros Animais' },
     ],
   },
   {
@@ -45,6 +47,9 @@ export const PLANO_CONTAS_PADRAO: {
       { codigo: '2.1.4', nome: 'Medicamento Gado' },
       { codigo: '2.1.5', nome: 'Comissões de Compra' },
       { codigo: '2.1.6', nome: 'Feno' },
+      // A compra do gado é o maior custo variável de quem engorda, e não tinha
+      // conta — a categoria "Aquisição de animais" da tela de Gastos vem pra cá.
+      { codigo: '2.1.7', nome: 'Compra de Animais' },
     ],
   },
   {

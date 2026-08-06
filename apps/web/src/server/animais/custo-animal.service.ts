@@ -10,6 +10,7 @@ import {
   type CustoDiretoAnimal,
   type RateioDoLote,
 } from '@pecus/shared';
+import { despesasDeLotes } from '../financeiro/despesas.service';
 import { prisma } from '../prisma';
 
 /**
@@ -27,7 +28,7 @@ import { prisma } from '../prisma';
 /** Custo de vários animais numa tacada, pra tela que lista o lote. */
 export async function custoDeAnimais(
   empresaId: string,
-  animais: { id: string; loteId: string | null }[],
+  animais: { id: string; loteId: string | null; valorRecebido?: unknown }[],
 ): Promise<Map<string, CustoAnimal>> {
   const resultado = new Map<string, CustoAnimal>();
   if (animais.length === 0) return resultado;
@@ -38,7 +39,7 @@ export async function custoDeAnimais(
   // Três consultas pro conjunto inteiro, independente de quantos animais. Fazer
   // por animal seria um N+1 numa tela que lista o lote todo — foi o que derrubou
   // reprodução e estoque antes, porque cada consulta ocupa uma conexão do pool.
-  const [lotes, gastos, animaisPorLote, eventos, consumos] = await Promise.all([
+  const [lotes, despesasPorLote, animaisPorLote, eventos, consumos] = await Promise.all([
     loteIds.length
       ? prisma.lote.findMany({
           where: { id: { in: loteIds }, empresaId },
@@ -52,12 +53,10 @@ export async function custoDeAnimais(
           },
         })
       : [],
-    loteIds.length
-      ? prisma.gasto.findMany({
-          where: { empresaId, loteId: { in: loteIds } },
-          select: { loteId: true, valor: true, insumoId: true, categoria: true },
-        })
-      : [],
+    // Despesas vêm de `Lancamento` agora, por `despesasDeLotes` — o único lugar
+    // que define o que é despesa de custo (competência, e compra de insumo fora
+    // do rateio). Antes lia `Gasto`, tabela que não existe mais.
+    despesasDeLotes(empresaId, loteIds),
     loteIds.length
       ? prisma.animal.groupBy({ by: ['loteId'], where: { empresaId, loteId: { in: loteIds } }, _count: { _all: true } })
       : [],
@@ -89,9 +88,11 @@ export async function custoDeAnimais(
   const rateioPorLote = new Map<string, RateioDoLote>();
   const compraPorLote = new Map<string, number | null>();
   for (const lote of lotes) {
-    const gastosDoLote = gastos
-      .filter((g) => g.loteId === lote.id)
-      .map((g) => ({ valor: Number(g.valor), insumoId: g.insumoId, categoria: g.categoria }));
+    const gastosDoLote = (despesasPorLote.get(lote.id) ?? []).map((d) => ({
+      valor: d.valor,
+      insumoId: d.insumoId,
+      categoria: d.conta,
+    }));
 
     const consumosDoLote = consumos
       .filter((c) => c.loteId === lote.id)
@@ -150,6 +151,7 @@ export async function custoDeAnimais(
         compraPorCabeca: animal.loteId ? (compraPorLote.get(animal.loteId) ?? null) : null,
         rateio: animal.loteId ? (rateioPorLote.get(animal.loteId) ?? null) : null,
         diretos: diretosPorAnimal.get(animal.id) ?? [],
+        receita: animal.valorRecebido == null ? null : Number(animal.valorRecebido),
       }),
     );
   }
@@ -159,7 +161,7 @@ export async function custoDeAnimais(
 export async function custoDoAnimal(empresaId: string, animalId: string): Promise<CustoAnimal> {
   const animal = await prisma.animal.findFirst({
     where: { id: animalId, empresaId },
-    select: { id: true, loteId: true },
+    select: { id: true, loteId: true, valorRecebido: true },
   });
   if (!animal) throw new NotFoundException('Animal não encontrado.');
   const mapa = await custoDeAnimais(empresaId, [animal]);

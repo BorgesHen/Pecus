@@ -46,9 +46,9 @@ const FORM_VAZIO: NovoLote = {
  *
  * O aviso anterior dizia que "pesagens e gastos também serão removidos". Só a
  * primeira metade era verdade: `Pesagem` e o histórico de método são cascata, mas
- * gasto, animal, lançamento financeiro e baixa de estoque apenas **perdem o
- * vínculo** — continuam existindo, sem lote. E os animais nem eram mencionados,
- * embora sejam o que mais dói perder de vista.
+ * animal, lançamento financeiro e baixa de estoque apenas **perdem o vínculo** —
+ * continuam existindo, sem lote. E os animais nem eram mencionados, embora sejam
+ * o que mais dói perder de vista.
  *
  * Um aviso que promete apagar o que não apaga é pior que nenhum aviso: quem
  * confia nele deixa dado órfão sem saber.
@@ -58,7 +58,7 @@ function mensagemDeExclusao(lote: LoteComContagem): string {
 
   const orfaos = [
     lote._count.animais > 0 ? `${lote._count.animais} animal(is)` : null,
-    lote._count.gastos > 0 ? `${lote._count.gastos} gasto(s)` : null,
+    lote._count.lancamentos > 0 ? `${lote._count.lancamentos} lançamento(s) financeiro(s)` : null,
   ].filter(Boolean);
 
   const semVinculo = orfaos.length

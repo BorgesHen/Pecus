@@ -164,7 +164,6 @@ model Empresa {
   usuarios            UsuarioEmpresa[]
   lotes               Lote[]
   areas               Area[]
-  gastos              Gasto[]
   metodosManejo       MetodoManejo[]
   animais             Animal[]
   eventosSanitarios   EventoSanitario[]
@@ -294,7 +293,6 @@ model Lote {
   metodoManejo    MetodoManejo?         @relation(fields: [metodoManejoId], references: [id])
   area            Area?                 @relation(fields: [areaId], references: [id], onDelete: SetNull)
   pesagens        Pesagem[]
-  gastos          Gasto[]
   metodoHistorico LoteMetodoHistorico[]
   animais         Animal[]
   lancamentos     Lancamento[]
@@ -371,6 +369,30 @@ model Animal {
   dataSaida      DateTime?
   motivoSaida    String?
   observacao     String?
+
+  // ----- Abate (o que só se sabe DEPOIS que o animal sai) -----
+  // A saída não encerra o registro do animal: ela abre esta etapa. O frigorífico
+  // devolve o peso de carcaça dias depois, e é ele que fecha o rendimento real do
+  // animal e, somando os do lote, o rendimento real do lote.
+  //
+  // Guarda o peso de carcaça em kg, e NÃO o percentual: é o que a nota traz e é
+  // sobre o que o dinheiro é pago. O rendimento é razão derivada (ver abate.ts),
+  // então não tem coluna — dois lugares para o mesmo número divergiriam.
+  /// kg de carcaça quente, da nota do frigorífico.
+  pesoCarcaca    Float?
+  /// Pode ser depois da data de saída: o animal sai, embarca e é abatido dias após.
+  dataAbate      DateTime?
+  /// Peso vivo na balança do frigorífico, quando a nota traz. Sem ele o rendimento
+  /// usa o peso de saída da fazenda — que inclui a quebra de transporte e por isso
+  /// dá um rendimento alguns pontos menor.
+  pesoVivoAbate  Float?
+  /// Tipificação, desconto, hematoma — o que a nota registra em texto.
+  observacaoAbate String?
+  /// Valor total recebido pela venda deste animal (R$). Guarda o TOTAL e não o
+  /// R$/@: o R$/@ é razão derivada (total ÷ arrobas), e guardar a razão perderia
+  /// o total, que é o que entra no caixa. A tela aceita digitar o R$/@ e converte.
+  valorRecebido   Decimal? @db.Decimal(14, 2)
+
   createdAt      DateTime        @default(now())
 
   empresa             Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -379,6 +401,7 @@ model Animal {
   eventosReprodutivos EventoReprodutivo[] @relation("EventoReprodutivoAnimal")
   nascimentosComoCria EventoReprodutivo[] @relation("EventoReprodutivoCria")
   pesagens            PesagemAnimal[]
+  lancamentos         Lancamento[]
 
   @@unique([empresaId, identificador])
   /// O acompanhamento do lote pergunta exatamente isto: os animais ativos de um lote.
@@ -508,27 +531,6 @@ model PesagemAnimal {
   @@index([animalId, data])
 }
 
-model Gasto {
-  id         String   @id @default(uuid())
-  empresaId  String
-  loteId     String?
-  insumoId   String? // se informado, o valor lançado dá entrada no estoque desse insumo
-  categoria  String
-  descricao  String?
-  valor      Decimal  @db.Decimal(12, 2)
-  quantidade Float? // ex: litros, sacos, kg
-  unidade    String? // ex: "L", "kg", "saco"
-  data       DateTime
-  createdAt  DateTime @default(now())
-
-  empresa          Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  lote             Lote?             @relation(fields: [loteId], references: [id])
-  insumo           Insumo?           @relation(fields: [insumoId], references: [id])
-  movimentosInsumo MovimentoInsumo[]
-
-  @@index([empresaId, loteId])
-}
-
 model Insumo {
   id            String   @id @default(uuid())
   empresaId     String
@@ -539,7 +541,7 @@ model Insumo {
 
   empresa           Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   movimentos        MovimentoInsumo[]
-  gastos            Gasto[]
+  lancamentos       Lancamento[]
   eventosSanitarios EventoSanitario[]
 
   @@unique([empresaId, nome])
@@ -570,13 +572,15 @@ model MovimentoInsumo {
   /// virar custo do lote: a compra em si não é custo (é estoque), o consumo é.
   /// Nulo = consumo geral da fazenda, que não entra em custo de lote nenhum.
   loteId     String?
-  gastoId    String?
+  /// Compra que gerou a entrada. Era `gastoId`; virou lançamento quando Gastos e
+  /// Financeiro deixaram de ser duas tabelas para o mesmo fato.
+  lancamentoId String?
   observacao String?
   createdAt  DateTime            @default(now())
 
   empresa           Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   insumo            Insumo            @relation(fields: [insumoId], references: [id], onDelete: Cascade)
-  gasto             Gasto?            @relation(fields: [gastoId], references: [id])
+  lancamento        Lancamento?       @relation(fields: [lancamentoId], references: [id])
   lote              Lote?             @relation(fields: [loteId], references: [id])
   eventosSanitarios EventoSanitario[]
 
@@ -649,11 +653,20 @@ model Lancamento {
   empresaId       String
   contaId         String
   loteId          String? // "projeto" — null = geral/consolidado da fazenda
+  /// Animal que originou o lançamento (receita da venda). É o que evita duplicar
+  /// a receita quando o abate é corrigido: acha o lançamento do animal e atualiza.
+  animalId        String?
   contatoId       String?
   contaBancariaId String?
   formaPagamento  FormaPagamento?
   descricao       String?
   documento       String?
+
+  /// Insumo comprado — quando preenchido junto com `quantidade`, o lançamento
+  /// abastece o estoque (a entrada automática que antes vinha do Gasto).
+  insumoId        String?
+  quantidade      Float?
+  unidade         String?
 
   valorTotal    Decimal @db.Decimal(14, 2)
   totalParcelas Int     @default(1)
@@ -666,13 +679,19 @@ model Lancamento {
   dataLiquidacao DateTime?
 
   empresa       Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  conta         ContaFinanceira @relation(fields: [contaId], references: [id])
-  lote          Lote?           @relation(fields: [loteId], references: [id])
-  contato       Contato?        @relation(fields: [contatoId], references: [id])
-  contaBancaria ContaBancaria?  @relation(fields: [contaBancariaId], references: [id])
+  conta            ContaFinanceira   @relation(fields: [contaId], references: [id])
+  lote             Lote?             @relation(fields: [loteId], references: [id])
+  contato          Contato?          @relation(fields: [contatoId], references: [id])
+  contaBancaria    ContaBancaria?    @relation(fields: [contaBancariaId], references: [id])
+  insumo           Insumo?           @relation(fields: [insumoId], references: [id])
+  animal           Animal?           @relation(fields: [animalId], references: [id])
+  movimentosInsumo MovimentoInsumo[]
 
   @@index([empresaId, dataDocumento])
   @@index([empresaId, dataLiquidacao])
+  @@index([empresaId, loteId])
+  @@index([empresaId, contaId])
+  @@index([empresaId, animalId])
 }
 
 /// Tipo de ação registrada na trilha de atividades.

@@ -135,8 +135,8 @@ export async function registrarConsumo(empresaId: string, insumoId: string, dto:
  * o custo médio fica mil vezes menor. Sem uma forma de apagar, o único conserto
  * era mexer no banco.
  *
- * Só movimento **manual**: o que veio de uma compra tem `gastoId` e some junto
- * com o gasto — apagar só o movimento deixaria o gasto apontando pro nada. E o
+ * Só movimento **manual**: o que veio de uma compra tem `lancamentoId` e some
+ * junto com a despesa — apagar só o movimento deixaria a despesa sem lastro. E o
  * que veio de uma aplicação sanitária pertence ao evento: apagar aqui deixaria o
  * evento dizendo que consumiu algo que não saiu do estoque.
  */
@@ -147,9 +147,9 @@ export async function removerMovimento(empresaId: string, insumoId: string, movi
   });
   if (!movimento) throw new NotFoundException('Movimento não encontrado neste insumo.');
 
-  if (movimento.gastoId) {
+  if (movimento.lancamentoId) {
     throw new ConflictException([
-      'Este movimento veio de uma compra registrada como gasto. Exclua o gasto para desfazer a entrada.',
+      'Este movimento veio de uma compra lançada como despesa. Exclua a despesa para desfazer a entrada.',
     ]);
   }
   if (movimento._count.eventosSanitarios > 0) {
@@ -168,8 +168,8 @@ export async function removerMovimento(empresaId: string, insumoId: string, movi
 }
 
 /**
- * Entrada manual. Fica sem `gastoId` de propósito: é o que separa o que entrou
- * por compra registrada (rastreável até o gasto) do que foi lançado à mão.
+ * Entrada manual. Fica sem `lancamentoId` de propósito: é o que separa o que
+ * entrou por compra registrada (rastreável até a despesa) do que foi lançado à mão.
  *
  * O valor é opcional e é o que alimenta o custo médio. Entrada sem valor (saldo
  * inicial, ajuste de inventário, doação) fica de fora da média em vez de entrar

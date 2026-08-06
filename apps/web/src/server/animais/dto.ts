@@ -101,6 +101,58 @@ export class DarSaidaAnimalDto {
   pesoSaida?: number;
 }
 
+/**
+ * Abate do animal — o que a nota do frigorífico devolve dias depois da saída.
+ *
+ * Pede o **peso de carcaça em kg**, não o rendimento. O rendimento é razão
+ * derivada (carcaça ÷ peso vivo) e guardar a razão perderia o kg, que é o que a
+ * nota traz e sobre o que o dinheiro é pago. A tela pode aceitar o % como
+ * conveniência e converter antes de enviar, mas só o kg chega aqui.
+ */
+export class RegistrarAbateDto {
+  @IsNumber()
+  @Min(1)
+  @Max(PESO_MAXIMO_KG)
+  pesoCarcaca: number;
+
+  @IsDateString()
+  dataAbate: string;
+
+  /**
+   * Peso vivo na balança do frigorífico. Opcional porque nem toda nota traz —
+   * sem ele o rendimento usa o peso de saída da fazenda, que inclui a quebra de
+   * transporte e por isso dá alguns pontos menos.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(PESO_MAXIMO_KG)
+  pesoVivoAbate?: number;
+
+  /** Tipificação, desconto, hematoma — o que a nota registra em texto. */
+  @IsOptional()
+  @IsString()
+  observacaoAbate?: string;
+
+  /**
+   * Valor TOTAL recebido pela venda (R$). A tela aceita digitar o R$/@ e converte
+   * antes de enviar — o R$/@ é razão derivada, e guardar a razão perderia o total,
+   * que é o que entra no caixa.
+   *
+   * Informar isto cria (ou atualiza) um lançamento de RECEITA em aberto, que
+   * aparece em contas a receber e é liquidado quando o dinheiro cair.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  valorRecebido?: number;
+
+  /** Comprador — vira o contato do lançamento de receita. */
+  @IsOptional()
+  @IsString()
+  contatoId?: string;
+}
+
 /** Pesagem individual do animal — a base do GMD individual. */
 export class CriarPesagemAnimalDto {
   @IsDateString()

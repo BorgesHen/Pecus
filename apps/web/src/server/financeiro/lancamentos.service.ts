@@ -1,9 +1,13 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { NaturezaFinanceira, StatusLancamento, diaJaPassou } from '@pecus/shared';
 import { removerCamposDesativados } from '../campos-desativados.util';
 import { obterCamposDesativados } from '../empresas/empresas.service';
 import { prisma } from '../prisma';
-import type { CriarLancamentoDto, LiquidarLancamentoDto } from './dto/lancamento.dto';
+import type {
+  AtualizarLancamentoDto,
+  CriarLancamentoDto,
+  LiquidarLancamentoDto,
+} from './dto/lancamento.dto';
 
 export interface FiltrosLancamento {
   natureza?: NaturezaFinanceira;
@@ -156,6 +160,81 @@ export async function liquidar(empresaId: string, id: string, dto: LiquidarLanca
     where: { id },
     data: { dataLiquidacao: new Date(dto.dataLiquidacao), contaBancariaId: dto.contaBancariaId },
   });
+}
+
+/**
+ * Edita um lançamento em aberto ou liquidado.
+ *
+ * Faltava, e a única saída era excluir e relançar — perdendo o histórico da
+ * parcela e, num parcelado, obrigando a refazer a série inteira.
+ *
+ * Não mexe no parcelamento: `totalParcelas`/`numeroParcela` definem a série, e
+ * alterá-los numa parcela isolada faria a soma das parcelas parar de fechar com o
+ * total. `valorTotal` só acompanha quando é parcela única, onde total e parcela
+ * são o mesmo número.
+ */
+export async function atualizar(empresaId: string, id: string, dto: AtualizarLancamentoDto) {
+  const atual = await garantirLancamentoDaEmpresa(empresaId, id);
+
+  if (dto.contaId) await garantirContaDaEmpresa(empresaId, dto.contaId);
+  if (dto.loteId) await garantirLoteDaEmpresa(empresaId, dto.loteId);
+  if (dto.contatoId) await garantirContatoDaEmpresa(empresaId, dto.contatoId);
+  if (dto.contaBancariaId) await garantirContaBancariaDaEmpresa(empresaId, dto.contaBancariaId);
+
+  const parcelaUnica = atual.totalParcelas === 1;
+
+  const atualizado = await prisma.lancamento.update({
+    where: { id },
+    data: {
+      contaId: dto.contaId,
+      loteId: dto.loteId,
+      contatoId: dto.contatoId,
+      contaBancariaId: dto.contaBancariaId,
+      formaPagamento: dto.formaPagamento,
+      descricao: dto.descricao,
+      documento: dto.documento,
+      valorParcela: dto.valorParcela,
+      ...(dto.valorParcela != null && parcelaUnica ? { valorTotal: dto.valorParcela } : {}),
+      dataDocumento: dto.dataDocumento ? new Date(dto.dataDocumento) : undefined,
+      dataVencimento: dto.dataVencimento ? new Date(dto.dataVencimento) : undefined,
+    },
+    include: { conta: true },
+  });
+
+  return {
+    ...atualizado,
+    /**
+     * Avisa quando o valor de uma parcela de série foi alterado: a soma das
+     * parcelas deixa de fechar com `valorTotal`, e é melhor dizer isso do que
+     * deixar a divergência aparecer num relatório depois.
+     */
+    aviso: dto.valorParcela != null && !parcelaUnica
+      ? `Esta é a parcela ${atual.numeroParcela} de ${atual.totalParcelas}. O valor total do lançamento continua ${Number(atual.valorTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} — confira as outras parcelas se quis mudar o valor de todas.`
+      : null,
+  };
+}
+
+/**
+ * Desfaz a liquidação — o estorno que faltava.
+ *
+ * Liquidar errado (data errada, banco errado, parcela errada) só tinha saída
+ * excluindo a parcela. Agora volta pra "em aberto", e o dinheiro sai do saldo do
+ * banco na mesma hora, porque o saldo conta só o liquidado.
+ */
+export async function estornarLiquidacao(empresaId: string, id: string) {
+  const lancamento = await garantirLancamentoDaEmpresa(empresaId, id);
+  if (!lancamento.dataLiquidacao) {
+    throw new BadRequestException(['Este lançamento já está em aberto — não há liquidação a estornar.']);
+  }
+  const estornado = await prisma.lancamento.update({
+    where: { id },
+    data: { dataLiquidacao: null },
+  });
+  return {
+    ...estornado,
+    liquidacaoEstornada: lancamento.dataLiquidacao.toISOString().slice(0, 10),
+    valorParcela: Number(estornado.valorParcela),
+  };
 }
 
 export async function remover(empresaId: string, id: string) {

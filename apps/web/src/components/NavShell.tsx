@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Baby,
   ChartColumn,
   ChevronDown,
   Contact,
@@ -24,6 +23,7 @@ import {
   Stethoscope,
   Ticket,
   Users,
+  VenusAndMars,
   Warehouse,
   Workflow,
   type LucideIcon,
@@ -63,7 +63,12 @@ const ITENS: ItemNav[] = [
     modulo: ModuloSistema.ANIMAIS,
     filhos: [
       { href: '/sanidade', label: 'Sanidade', icone: Stethoscope, modulo: ModuloSistema.SANIDADE },
-      { href: '/reproducao', label: 'Reprodução', icone: Baby, modulo: ModuloSistema.REPRODUCAO },
+      // `VenusAndMars` e não `Baby`: o de antes é um bebê humano de fralda, que
+      // não tem nada a ver com o módulo. O par de símbolos de macho e fêmea é o
+      // símbolo consagrado de acasalamento, cobre o que a tela faz de verdade
+      // (estação de monta, inseminação, diagnóstico de gestação, parto) e não
+      // escolhe espécie — serve pro bovino e pro ovino.
+      { href: '/reproducao', label: 'Reprodução', icone: VenusAndMars, modulo: ModuloSistema.REPRODUCAO },
     ],
   },
   { href: '/insumos', label: 'Estoque', icone: Warehouse, modulo: ModuloSistema.ESTOQUE },

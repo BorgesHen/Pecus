@@ -26,12 +26,14 @@ import type { EventoSanitario } from '@pecus/shared';
 import {
   obterAnimal,
   darSaidaAnimal,
+  obterAbateDoAnimal,
   obterCustoDoAnimal,
   obterHistoricoPeso,
   criarPesagemAnimal,
   removerPesagemAnimal,
   type AnimalComLote,
   type HistoricoPesoAnimal,
+  type AbateDoAnimal as AbateDoAnimalDados,
   type CustoAnimal,
   type PesagemDoAnimal,
 } from '@/lib/animais';
@@ -48,6 +50,7 @@ import {
 } from '@/lib/reproducao';
 import { BotaoHistorico } from '@/components/BotaoHistorico';
 import { CustoDoAnimal } from '@/components/CustoDoAnimal';
+import { AbateDoAnimal } from '@/components/AbateDoAnimal';
 import { CampoInsumoAplicado } from '@/components/CampoInsumoAplicado';
 import { listarInsumos, type InsumoComSaldo } from '@/lib/insumos';
 import { usePermissoes } from '@/contexts/PermissoesContext';
@@ -100,6 +103,7 @@ export default function DetalheAnimalPage() {
   const [formPesagem, setFormPesagem] = useState({ data: hojeISO(), peso: '', observacao: '' });
   const [pesagemParaExcluir, setPesagemParaExcluir] = useState<PesagemDoAnimal | null>(null);
   const [custo, setCusto] = useState<CustoAnimal | null>(null);
+  const [abate, setAbate] = useState<AbateDoAnimalDados | null>(null);
   const [insumos, setInsumos] = useState<InsumoComSaldo[]>([]);
 
   const [modalSanidadeAberto, setModalSanidadeAberto] = useState(false);
@@ -144,6 +148,8 @@ export default function DetalheAnimalPage() {
     if (podeVerCusto) {
       obterCustoDoAnimal(animalId).then(setCusto).catch(() => setCusto(null));
     }
+    // Abate é dado do módulo Animais, então quem abre a ficha já pode ver.
+    obterAbateDoAnimal(animalId).then(setAbate).catch(() => setAbate(null));
   }
 
   async function salvarPesagem() {
@@ -401,6 +407,21 @@ export default function DetalheAnimalPage() {
           </p>
         )}
       </div>
+
+      {/* Abate antes do custo: é o desfecho do animal, e quando falta a carcaça
+          o card aparece em estado pendente — a saída abre esta etapa, não fecha
+          o registro. */}
+      {abate && (
+        <AbateDoAnimal
+          animalId={animalId}
+          especie={animal.especie}
+          dataSaida={animal.dataSaida ?? null}
+          pesoSaida={ultimoPonto?.peso ?? null}
+          abate={abate}
+          podeEditar={podeEditarAnimais}
+          onMudou={carregar}
+        />
+      )}
 
       {/* Custo antes das pesagens: é o número que resume o animal, e ele
           depende do que está lançado abaixo (remédio, exame). */}

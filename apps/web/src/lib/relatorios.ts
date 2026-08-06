@@ -8,7 +8,17 @@ export interface CustoArroba {
   custoTotal: number;
   ganhoKgPorAnimal: number;
   ganhoTotalKg: number;
+  /** O rendimento que entrou na conta — realizado se já existe, estimado se não. */
   rendimentoCarcaca: number;
+  /** Diz qual dos dois é: um custo por arroba estimado não se compara a um realizado. */
+  origemRendimento: 'realizado' | 'estimado';
+  rendimentoEstimado: number;
+  /** Nulo enquanto nenhum animal abatido tiver peso de carcaça informado. */
+  rendimentoRealizado: number | null;
+  abatidosComCarcaca: number;
+  abatidos: number;
+  /** Arrobas de carcaça entregues — diferente das arrobas PRODUZIDAS no período. */
+  arrobasEntregues: number | null;
   ganhoCarcacaKg: number;
   custoPorKgCarcaca: number | null;
   ganhoArrobas: number | null;

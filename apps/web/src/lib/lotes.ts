@@ -2,7 +2,6 @@ import { api } from './api';
 import type {
   Lote,
   Area,
-  Gasto,
   Pesagem,
   MetodoManejo,
   LoteMetodoHistorico,
@@ -13,14 +12,14 @@ import type {
 
 export interface LoteComContagem extends Lote {
   metodoManejo?: MetodoManejo | null;
-  _count: { pesagens: number; gastos: number; animais: number };
+  /** `lancamentos` e não `gastos`: depois da unificação a despesa do lote é lançamento. */
+  _count: { pesagens: number; lancamentos: number; animais: number };
 }
 
 export interface LoteDetalhado extends Lote {
   metodoManejo?: MetodoManejo | null;
   area?: Area | null;
   pesagens: Pesagem[];
-  gastos: Gasto[];
   metodoHistorico: LoteMetodoHistorico[];
 }
 
@@ -193,4 +192,30 @@ export interface CustosDoLote {
 
 export function obterCustosDoLote(id: string) {
   return api<CustosDoLote>(`/lotes/${id}/custos`);
+}
+
+// ----- Abate e rendimento realizado do lote -----
+
+export interface AbateDoLote {
+  cadastrados: number;
+  /** Ainda no rebanho — enquanto for maior que zero o lote não fecha. */
+  ativos: number;
+  abatidos: number;
+  comCarcaca: number;
+  /** Quem saiu e ainda não tem carcaça informada. */
+  pendentes: { id: string; identificador: string }[];
+  pesoCarcacaTotal: number;
+  pesoVivoTotal: number;
+  /** Carcaça total ÷ peso vivo total — ponderado, NÃO a média dos percentuais. */
+  rendimentoRealizado: number | null;
+  arrobasTotais: number | null;
+  /** Todos saíram e todos têm carcaça: os números são finais. */
+  completo: boolean;
+  especie: EspecieAnimal;
+  /** O que o lote usava como estimativa, pra comparar com o realizado. */
+  rendimentoEstimado: number;
+}
+
+export function obterAbateDoLote(id: string) {
+  return api<AbateDoLote>(`/lotes/${id}/abate`);
 }
